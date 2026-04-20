@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrix Arena</title>
+  <style>
+    :root {
+      --bg: #f5efe1;
+      --panel: rgba(255, 252, 244, 0.92);
+      --panel-strong: #fffaf0;
+      --ink: #1f2d2f;
+      --muted: #5d6964;
+      --accent: #0f766e;
+      --accent-2: #c2410c;
+      --good: #15803d;
+      --bad: #b91c1c;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --gold: #c79a1b;
+      --line: rgba(31, 45, 47, 0.12);
+      --shadow: 0 18px 40px rgba(44, 52, 55, 0.12);
+      --grid-step: 32px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(194, 65, 12, 0.2), transparent 24%),
+        linear-gradient(135deg, #f6f1e5 0%, #efe5d2 45%, #f8f5ec 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.6), transparent 88%);
+    }
+
+    .page {
+      width: min(1220px, calc(100% - 32px));
+      margin: 24px auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255, 250, 240, 0.92), rgba(250, 243, 228, 0.96));
+      border: 1px solid rgba(31, 45, 47, 0.08);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.7rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 0.95;
+    }
+
+    .title-block p,
+    .panel p,
+    .panel li,
+    .small {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stat-strip {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stat {
+      min-width: 110px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(31, 45, 47, 0.07);
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(310px, 0.9fr);
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(31, 45, 47, 0.08);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .arena-head,
+    .controls-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .pill-row,
+    .button-row,
+    .vector-grid,
+    .classify-row,
+    .matrix-grid,
+    .teacher-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.1);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 16px;
+      padding: 11px 15px;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(31, 45, 47, 0.08);
+      color: var(--ink);
+    }
+
+    .btn-warning {
+      background: rgba(194, 65, 12, 0.14);
+      color: var(--accent-2);
+    }
+
+    .vector-btn,
+    .classify-btn {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(31, 45, 47, 0.08);
+      color: var(--ink);
+    }
+
+    .vector-btn.active,
+    .classify-btn.active {
+      background: rgba(37, 99, 235, 0.12);
+      border-color: rgba(37, 99, 235, 0.4);
+      color: var(--blue);
+    }
+
+    .classify-btn[data-kind="null"] {
+      background: rgba(194, 65, 12, 0.12);
+      color: var(--accent-2);
+    }
+
+    .classify-btn[data-kind="eigen"] {
+      background: rgba(21, 128, 61, 0.12);
+      color: var(--good);
+    }
+
+    .classify-btn[data-kind="neither"] {
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--blue);
+    }
+
+    .arena-shell {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 240, 226, 0.96));
+      border: 1px solid rgba(31, 45, 47, 0.08);
+    }
+
+    canvas {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(240, 235, 225, 0.4));
+    }
+
+    .legend {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: grid;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 250, 242, 0.85);
+      border: 1px solid rgba(31, 45, 47, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .legend-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+    }
+
+    .blue {
+      background: var(--blue);
+    }
+
+    .red {
+      background: var(--red);
+    }
+
+    .matrix-box,
+    .feedback,
+    .tip,
+    .info-card,
+    .teacher-box {
+      background: var(--panel-strong);
+      border: 1px solid rgba(31, 45, 47, 0.08);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .matrix-grid {
+      align-items: center;
+    }
+
+    .matrix {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(40px, 48px));
+      gap: 8px;
+      padding: 10px 16px;
+      border-left: 4px solid rgba(31, 45, 47, 0.18);
+      border-right: 4px solid rgba(31, 45, 47, 0.18);
+      font-weight: 700;
+      background: rgba(31, 45, 47, 0.04);
+      border-radius: 10px;
+    }
+
+    .vector-grid button {
+      min-width: 86px;
+    }
+
+    textarea,
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid rgba(31, 45, 47, 0.15);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .feedback {
+      min-height: 92px;
+    }
+
+    .feedback strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .good {
+      color: var(--good);
+    }
+
+    .bad {
+      color: var(--bad);
+    }
+
+    .tip {
+      color: var(--muted);
+    }
+
+    .teacher-box {
+      display: none;
+      gap: 12px;
+    }
+
+    .teacher-box.open {
+      display: grid;
+    }
+
+    .teacher-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .teacher-grid label,
+    .teacher-row label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .formula {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 0.95rem;
+      background: rgba(31, 45, 47, 0.05);
+      padding: 10px 12px;
+      border-radius: 12px;
+      overflow: auto;
+    }
+
+    .algebra-only {
+      display: none;
+    }
+
+    .show-algebra .algebra-only {
+      display: block;
+    }
+
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(31, 45, 47, 0.06);
+      border-radius: 999px;
+    }
+
+    .mode-toggle button.active {
+      background: white;
+      color: var(--ink);
+      box-shadow: 0 4px 12px rgba(31, 45, 47, 0.08);
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding-bottom: 8px;
+    }
+
+    @media (max-width: 960px) {
+      .layout,
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 22px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 16px, 1220px);
+        margin: 12px auto 20px;
+      }
+
+      .hero,
+      .panel {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .legend {
+        position: static;
+        margin: 12px;
+      }
+
+      .stat {
+        min-width: 92px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="title-block">
+          <div class="pill-row">
+            <span class="pill">Linear Algebra</span>
+            <span class="pill">Visual Reasoning</span>
+            <span class="pill">Matrix Arena</span>
+          </div>
+          <h1>Matrix Arena</h1>
+          <p>
+            Classify vectors by watching what a matrix does to them. Find directions that survive,
+            directions that vanish, and directions that bend.
+          </p>
+        </div>
+        <div class="stat-strip">
+          <div class="stat">
+            <span class="stat-label">Score</span>
+            <span class="stat-value" id="scoreValue">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Streak</span>
+            <span class="stat-value" id="streakValue">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Best</span>
+            <span class="stat-value" id="bestValue">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Round</span>
+            <span class="stat-value" id="roundValue">1</span>
+          </div>
+        </div>
+      </div>
+      <div class="small">
+        Blue is the original vector. Red is the transformed vector. If the red arrow lands at the origin,
+        the vector was erased. If red stays on the same line as blue, the direction is preserved.
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="panel">
+        <div class="arena-head">
+          <div>
+            <h2>Transformation Arena</h2>
+            <p id="levelDescription">Level 1: diagonal matrices make invariant directions easy to spot.</p>
+          </div>
+          <div class="mode-toggle" aria-label="view toggle">
+            <button class="btn-secondary active" id="geometricModeBtn" type="button">Geometric View</button>
+            <button class="btn-secondary" id="algebraModeBtn" type="button">Algebraic View</button>
+          </div>
+        </div>
+
+        <div class="arena-shell">
+          <canvas id="arenaCanvas" width="720" height="720"></canvas>
+          <div class="legend">
+            <div class="legend-item"><span class="swatch blue"></span> Original vector</div>
+            <div class="legend-item"><span class="swatch red"></span> Transformed vector</div>
+          </div>
+        </div>
+
+        <div class="matrix-grid" style="margin-top: 14px;">
+          <div class="matrix-box">
+            <strong>Current Matrix A</strong>
+            <div class="matrix" id="matrixDisplay"></div>
+          </div>
+          <div class="info-card">
+            <strong>Round Goal</strong>
+            <p>Choose a candidate vector, watch the animation, then classify it using the geometry you observe.</p>
+          </div>
+        </div>
+
+        <div class="info-grid" style="margin-top: 12px;">
+          <div class="info-card">
+            <h3>Candidate Vectors</h3>
+            <div class="vector-grid" id="vectorButtons"></div>
+          </div>
+          <div class="info-card">
+            <h3>Classify the Selected Vector</h3>
+            <div class="classify-row">
+              <button class="classify-btn" data-kind="null" type="button">Null Space Vector</button>
+              <button class="classify-btn" data-kind="eigen" type="button">Eigenvector</button>
+              <button class="classify-btn" data-kind="neither" type="button">Neither</button>
+            </div>
+            <p class="small">Rule of thumb: zero output means null space. Same line means eigenvector. Otherwise it is distorted.</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel" id="sidePanel">
+        <div class="controls-head">
+          <div>
+            <h2>Control Deck</h2>
+            <p>Progress through levels or switch to teacher mode with a custom matrix.</p>
+          </div>
+        </div>
+
+        <div class="button-row" style="margin-bottom: 12px;">
+          <button class="btn-primary" id="nextRoundBtn" type="button">Next Round</button>
+          <button class="btn-secondary" id="changeLevelBtn" type="button">Next Level</button>
+          <button class="btn-warning" id="hintBtn" type="button">Hint</button>
+          <button class="btn-secondary" id="teacherToggleBtn" type="button">Teacher Mode</button>
+        </div>
+
+        <div class="tip" id="hintBox">
+          Hint system ready. Use it only after you have watched the geometry.
+        </div>
+
+        <div class="feedback" id="feedbackBox" style="margin-top: 12px;">
+          <strong>Awaiting move</strong>
+          Select a vector to begin the round.
+        </div>
+
+        <div class="info-card" style="margin-top: 12px;">
+          <h3>Reasoning Bonus</h3>
+          <p>Add a short explanation. A correct answer with a non-empty explanation earns a bonus.</p>
+          <textarea id="reasoningInput" placeholder="Example: The transformed vector stayed on the same line, so the direction was preserved."></textarea>
+        </div>
+
+        <div class="info-card algebra-only" style="margin-top: 12px;">
+          <h3>Algebraic View</h3>
+          <div class="formula" id="algebraOutput">Pick a vector to view A v and the classification test.</div>
+        </div>
+
+        <div class="info-card" style="margin-top: 12px;">
+          <h3>Challenge Meter</h3>
+          <p>Level 4 adds an eigenvalue guess for vectors that stay on the same line.</p>
+          <label for="lambdaGuess" class="small">Eigenvalue guess λ</label>
+          <input id="lambdaGuess" type="number" step="any" placeholder="Only relevant in challenge mode" />
+        </div>
+
+        <div class="teacher-box" id="teacherBox" style="margin-top: 12px;">
+          <h3>Teacher Mode</h3>
+          <p>Enter a custom 2 × 2 matrix and generate fresh random vectors.</p>
+          <div class="teacher-grid">
+            <label>a11 <input id="m11" type="number" value="1" step="any" /></label>
+            <label>a12 <input id="m12" type="number" value="0" step="any" /></label>
+            <label>a21 <input id="m21" type="number" value="0" step="any" /></label>
+            <label>a22 <input id="m22" type="number" value="1" step="any" /></label>
+          </div>
+          <div class="teacher-row">
+            <button class="btn-primary" id="applyTeacherMatrixBtn" type="button">Apply Matrix</button>
+            <button class="btn-secondary" id="randomVectorsBtn" type="button">Random Vectors</button>
+          </div>
+        </div>
+
+        <div class="info-card" style="margin-top: 12px;">
+          <h3>Concept Radar</h3>
+          <ul>
+            <li>Null space vectors are erased and reveal information loss.</li>
+            <li>Eigenvectors keep their direction, even when scaled or flipped.</li>
+            <li>General vectors get redirected by the transformation.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+
+    <div class="footer-note">Built as a browser-based teaching game for undergraduate linear algebra.</div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("arenaCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreValue = document.getElementById("scoreValue");
+    const streakValue = document.getElementById("streakValue");
+    const bestValue = document.getElementById("bestValue");
+    const roundValue = document.getElementById("roundValue");
+    const levelDescription = document.getElementById("levelDescription");
+    const matrixDisplay = document.getElementById("matrixDisplay");
+    const vectorButtons = document.getElementById("vectorButtons");
+    const feedbackBox = document.getElementById("feedbackBox");
+    const hintBox = document.getElementById("hintBox");
+    const reasoningInput = document.getElementById("reasoningInput");
+    const algebraOutput = document.getElementById("algebraOutput");
+    const lambdaGuess = document.getElementById("lambdaGuess");
+    const sidePanel = document.getElementById("sidePanel");
+    const teacherBox = document.getElementById("teacherBox");
+
+    const levelDefinitions = [
+      {
+        name: "Level 1",
+        description: "Level 1: diagonal matrices make invariant directions easy to spot.",
+        matrix: [[2, 0], [0, -1]]
+      },
+      {
+        name: "Level 2",
+        description: "Level 2: diagonalizable non-diagonal matrices hide the invariant directions inside a tilt.",
+        matrix: [[3, 1], [0, 2]]
+      },
+      {
+        name: "Level 3",
+        description: "Level 3: nontrivial null space means some nonzero vectors collapse to the origin.",
+        matrix: [[1, -1], [1, -1]]
+      },
+      {
+        name: "Level 4",
+        description: "Level 4: challenge mode rewards you for recognizing the scaling factor as an eigenvalue.",
+        matrix: [[0, 2], [2, 0]]
+      }
+    ];
+
+    const state = {
+      levelIndex: 0,
+      round: 1,
+      score: 0,
+      streak: 0,
+      best: Number(localStorage.getItem("matrix-arena-best") || 0),
+      currentMatrix: levelDefinitions[0].matrix,
+      candidateVectors: [],
+      selectedVector: null,
+      transformedVector: [0, 0],
+      targetClassification: null,
+      animationFrame: null,
+      animationStart: 0,
+      animationDuration: 950,
+      displayVector: [0, 0],
+      showTeacherMode: false,
+      viewMode: "geometric",
+      lastResult: null,
+      roundResolved: false
+    };
+
+    const EPSILON = 1e-8;
+    const axisLimit = 8;
+    const scale = canvas.width / (axisLimit * 2 + 2);
+
+    function multiplyMatrixVector(matrix, vector) {
+      return [
+        matrix[0][0] * vector[0] + matrix[0][1] * vector[1],
+        matrix[1][0] * vector[0] + matrix[1][1] * vector[1]
+      ];
+    }
+
+    function isNullSpaceVector(vector, transformed) {
+      const output = transformed || multiplyMatrixVector(state.currentMatrix, vector);
+      return Math.abs(output[0]) < EPSILON && Math.abs(output[1]) < EPSILON;
+    }
+
+    function isEigenvector(vector, transformed) {
+      const output = transformed || multiplyMatrixVector(state.currentMatrix, vector);
+      if (Math.abs(vector[0]) < EPSILON && Math.abs(vector[1]) < EPSILON) {
+        return { isEigen: false, eigenvalue: null };
+      }
+      if (isNullSpaceVector(vector, output)) {
+        return { isEigen: false, eigenvalue: null };
+      }
+
+      const cross = vector[0] * output[1] - vector[1] * output[0];
+      if (Math.abs(cross) > EPSILON) {
+        return { isEigen: false, eigenvalue: null };
+      }
+
+      let eigenvalue = null;
+      if (Math.abs(vector[0]) > EPSILON) {
+        eigenvalue = output[0] / vector[0];
+      } else if (Math.abs(vector[1]) > EPSILON) {
+        eigenvalue = output[1] / vector[1];
+      }
+
+      return { isEigen: true, eigenvalue };
+    }
+
+    function classifyVector(vector, transformed) {
+      if (isNullSpaceVector(vector, transformed)) {
+        return { kind: "null", eigenvalue: null };
+      }
+      const eigenCheck = isEigenvector(vector, transformed);
+      if (eigenCheck.isEigen) {
+        return { kind: "eigen", eigenvalue: eigenCheck.eigenvalue };
+      }
+      return { kind: "neither", eigenvalue: null };
+    }
+
+    function formatNumber(value) {
+      if (Math.abs(value) < EPSILON) {
+        return "0";
+      }
+      if (Number.isInteger(value)) {
+        return String(value);
+      }
+      return value.toFixed(2).replace(/\.00$/, "");
+    }
+
+    function formatVector(vector) {
+      return `(${formatNumber(vector[0])}, ${formatNumber(vector[1])})`;
+    }
+
+    function matrixToHtml(matrix) {
+      return matrix.flat().map((value) => `<span>${formatNumber(value)}</span>`).join("");
+    }
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateCandidateVectors() {
+      const source = [];
+      const seen = new Set();
+
+      // Seed with level-aware vectors to make the pedagogical cases appear often.
+      const matrix = state.currentMatrix;
+      const specials = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+        [2, 1],
+        [-1, 2]
+      ];
+
+      if (Math.abs(matrix[0][0] - matrix[1][0]) < EPSILON && Math.abs(matrix[0][1] - matrix[1][1]) < EPSILON) {
+        specials.push([1, 1], [-1, -1]);
+      }
+
+      for (const vector of specials) {
+        const key = vector.join(",");
+        if (!seen.has(key) && !(vector[0] === 0 && vector[1] === 0)) {
+          seen.add(key);
+          source.push(vector);
+        }
+      }
+
+      while (source.length < 6) {
+        const vector = [randomInteger(-3, 3), randomInteger(-3, 3)];
+        const key = vector.join(",");
+        if (!seen.has(key) && !(vector[0] === 0 && vector[1] === 0)) {
+          seen.add(key);
+          source.push(vector);
+        }
+      }
+
+      return source.slice(0, 6);
+    }
+
+    function setCurrentMatrix(matrix, description) {
+      state.currentMatrix = matrix.map((row) => row.map(Number));
+      matrixDisplay.innerHTML = matrixToHtml(state.currentMatrix);
+      levelDescription.textContent = description;
+      prepareRound(true);
+    }
+
+    function prepareRound(resetSelection = false) {
+      state.candidateVectors = generateCandidateVectors();
+      if (resetSelection) {
+        state.selectedVector = null;
+        state.transformedVector = [0, 0];
+        state.displayVector = [0, 0];
+        state.targetClassification = null;
+        state.lastResult = null;
+        state.roundResolved = false;
+        reasoningInput.value = "";
+        lambdaGuess.value = "";
+      }
+      renderVectorButtons();
+      updateControlStates();
+      updateStats();
+      updateFeedback("Awaiting move", "Select a vector to begin the round.", "");
+      updateAlgebraView();
+      drawScene();
+    }
+
+    function updateStats() {
+      scoreValue.textContent = String(state.score);
+      streakValue.textContent = String(state.streak);
+      bestValue.textContent = String(state.best);
+      roundValue.textContent = String(state.round);
+    }
+
+    function renderVectorButtons() {
+      vectorButtons.innerHTML = "";
+      state.candidateVectors.forEach((vector, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "vector-btn";
+        button.textContent = `v${index + 1} = ${formatVector(vector)}`;
+        if (state.selectedVector && vector[0] === state.selectedVector[0] && vector[1] === state.selectedVector[1]) {
+          button.classList.add("active");
+        }
+        button.disabled = state.roundResolved;
+        button.addEventListener("click", () => handleVectorSelection(vector));
+        vectorButtons.appendChild(button);
+      });
+    }
+
+    function handleVectorSelection(vector) {
+      if (state.roundResolved) {
+        updateFeedback("Round complete", "Start the next round before selecting a new vector.", "", "bad");
+        return;
+      }
+      state.selectedVector = [...vector];
+      state.transformedVector = multiplyMatrixVector(state.currentMatrix, vector);
+      state.targetClassification = classifyVector(vector, state.transformedVector);
+      state.lastResult = null;
+      renderVectorButtons();
+      updateControlStates();
+      updateAlgebraView();
+      animateTransformation();
+    }
+
+    function animateTransformation() {
+      if (state.animationFrame) {
+        cancelAnimationFrame(state.animationFrame);
+      }
+
+      state.animationStart = performance.now();
+
+      function step(timestamp) {
+        const elapsed = timestamp - state.animationStart;
+        const t = Math.min(1, elapsed / state.animationDuration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        state.displayVector = [
+          state.selectedVector[0] + (state.transformedVector[0] - state.selectedVector[0]) * eased,
+          state.selectedVector[1] + (state.transformedVector[1] - state.selectedVector[1]) * eased
+        ];
+        drawScene();
+        if (t < 1) {
+          state.animationFrame = requestAnimationFrame(step);
+        } else {
+          state.displayVector = [...state.transformedVector];
+          drawScene();
+          updateFeedback(
+            "Vector transformed",
+            `Original ${formatVector(state.selectedVector)} became ${formatVector(state.transformedVector)}.`,
+            "Watch whether the red arrow vanished, stayed on the same line, or turned to a new direction."
+          );
+        }
+      }
+
+      state.displayVector = [...state.selectedVector];
+      updateFeedback(
+        "Animating",
+        `Applying A to ${formatVector(state.selectedVector)}...`,
+        "Blue shows the input. Red is moving toward the output."
+      );
+      state.animationFrame = requestAnimationFrame(step);
+    }
+
+    function updateFeedback(title, body, note, className = "") {
+      feedbackBox.innerHTML = `<strong class="${className}">${title}</strong>${body}${note ? `<div class="small" style="margin-top: 6px;">${note}</div>` : ""}`;
+    }
+
+    function updateHint() {
+      if (!state.selectedVector) {
+        hintBox.textContent = "Pick a vector first. Then use the hint system only after watching the geometry.";
+        return;
+      }
+
+      const transformed = state.transformedVector;
+      if (isNullSpaceVector(state.selectedVector, transformed)) {
+        hintBox.textContent = "Hint: Check if the output is zero. This vector may have been erased entirely.";
+      } else if (Math.abs(state.selectedVector[0] * transformed[1] - state.selectedVector[1] * transformed[0]) < EPSILON) {
+        hintBox.textContent = "Hint: Compare the lines through the origin. The direction may be preserved even if the length changes or the vector flips.";
+      } else {
+        hintBox.textContent = "Hint: The direction changed. If the red arrow leaves the original line, it is not an eigenvector.";
+      }
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+
+      ctx.strokeStyle = "rgba(31, 45, 47, 0.09)";
+      ctx.lineWidth = 1;
+      for (let i = -axisLimit; i <= axisLimit; i += 1) {
+        const position = i * scale;
+        ctx.beginPath();
+        ctx.moveTo(-axisLimit * scale, position);
+        ctx.lineTo(axisLimit * scale, position);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(position, -axisLimit * scale);
+        ctx.lineTo(position, axisLimit * scale);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(31, 45, 47, 0.34)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-axisLimit * scale, 0);
+      ctx.lineTo(axisLimit * scale, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -axisLimit * scale);
+      ctx.lineTo(0, axisLimit * scale);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(31, 45, 47, 0.5)";
+      ctx.font = "14px Menlo, monospace";
+      ctx.fillText("x", axisLimit * scale - 18, -10);
+      ctx.fillText("y", 10, -axisLimit * scale + 18);
+
+      ctx.restore();
+    }
+
+    function worldToCanvas(vector) {
+      return [
+        canvas.width / 2 + vector[0] * scale,
+        canvas.height / 2 - vector[1] * scale
+      ];
+    }
+
+    function drawArrow(vector, color, width) {
+      const [x, y] = worldToCanvas(vector);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, canvas.height / 2);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      const angle = Math.atan2(y - canvas.height / 2, x - canvas.width / 2);
+      const head = 12;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - head * Math.cos(angle - Math.PI / 6), y - head * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x - head * Math.cos(angle + Math.PI / 6), y - head * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawLineGuide(vector, color) {
+      if (!vector || (Math.abs(vector[0]) < EPSILON && Math.abs(vector[1]) < EPSILON)) {
+        return;
+      }
+
+      const length = Math.hypot(vector[0], vector[1]);
+      const direction = [vector[0] / length, vector[1] / length];
+      const far = [direction[0] * axisLimit, direction[1] * axisLimit];
+      const near = [-far[0], -far[1]];
+      const [x1, y1] = worldToCanvas(near);
+      const [x2, y2] = worldToCanvas(far);
+
+      ctx.strokeStyle = color;
+      ctx.setLineDash([8, 8]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawScene() {
+      drawGrid();
+
+      if (!state.selectedVector) {
+        return;
+      }
+
+      const current = state.displayVector || state.transformedVector;
+      const classification = state.targetClassification;
+      if (classification && classification.kind === "eigen") {
+        drawLineGuide(state.selectedVector, "rgba(21, 128, 61, 0.35)");
+      }
+
+      drawArrow(state.selectedVector, "#2563eb", 4);
+      drawArrow(current, "#dc2626", 4);
+
+      if (classification && classification.kind === "null") {
+        const origin = worldToCanvas([0, 0]);
+        ctx.fillStyle = "rgba(194, 65, 12, 0.25)";
+        ctx.beginPath();
+        ctx.arc(origin[0], origin[1], 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function scoreSubmission(playerKind) {
+      if (state.roundResolved) {
+        updateFeedback("Round complete", "Use Next Round to continue.", "", "bad");
+        return;
+      }
+      if (!state.selectedVector || !state.targetClassification) {
+        updateFeedback("No vector selected", "Choose a vector before classifying.", "", "bad");
+        return;
+      }
+
+      const correct = playerKind === state.targetClassification.kind;
+      const explanationBonus = correct && reasoningInput.value.trim() ? 2 : 0;
+      let message = "";
+      let note = "";
+
+      if (correct) {
+        state.score += 10 + explanationBonus;
+        state.streak += 1;
+        playToneSequence([440, 660], 0.08);
+
+        if (state.targetClassification.kind === "null") {
+          message = "Correct: This vector is in the null space because A v = 0, so the transformation erased it.";
+          note = "Pedagogical cue: null space vectors represent lost information under the transformation.";
+        } else if (state.targetClassification.kind === "eigen") {
+          message = "Correct: This vector is an eigenvector because its direction was preserved.";
+          const lambdaText = state.targetClassification.eigenvalue === null ? "" : ` Its eigenvalue is λ = ${formatNumber(state.targetClassification.eigenvalue)}.`;
+          note = `Only the length or orientation changed.${lambdaText}`;
+        } else {
+          message = "Correct: This vector is neither in the null space nor an eigenvector because the direction changed.";
+          note = "General vectors are redirected by the matrix and do not lie on the same line after transformation.";
+        }
+
+        if (state.levelIndex === 3 && state.targetClassification.kind === "eigen" && lambdaGuess.value.trim()) {
+          const guess = Number(lambdaGuess.value);
+          if (Math.abs(guess - state.targetClassification.eigenvalue) < 1e-6) {
+            state.score += 5;
+            note += " Challenge bonus: your eigenvalue guess was correct.";
+          } else {
+            note += ` Challenge note: the eigenvalue guess was off. Expected ${formatNumber(state.targetClassification.eigenvalue)}.`;
+          }
+        }
+      } else {
+        state.score -= 5;
+        state.streak = 0;
+        playToneSequence([220, 180], 0.1);
+        const correctLabel = {
+          null: "null space vector",
+          eigen: "eigenvector",
+          neither: "neither"
+        }[state.targetClassification.kind];
+        message = `Incorrect: this vector is a ${correctLabel}.`;
+        if (state.targetClassification.kind === "null") {
+          note = "The red vector collapsed to the origin, so the output was zero.";
+        } else if (state.targetClassification.kind === "eigen") {
+          note = "The red vector stayed on the same line through the origin, so the direction was preserved.";
+        } else {
+          note = "The red vector left the original line, so the direction changed.";
+        }
+      }
+
+      state.roundResolved = true;
+      state.best = Math.max(state.best, state.score);
+      localStorage.setItem("matrix-arena-best", String(state.best));
+      state.lastResult = correct;
+      renderVectorButtons();
+      updateControlStates();
+      updateStats();
+      updateFeedback(correct ? "Classification complete" : "Try again next round", message, note, correct ? "good" : "bad");
+    }
+
+    function updateControlStates() {
+      document.querySelectorAll(".classify-btn").forEach((button) => {
+        button.disabled = !state.selectedVector || state.roundResolved;
+      });
+    }
+
+    function updateAlgebraView() {
+      if (!state.selectedVector) {
+        algebraOutput.textContent = "Pick a vector to view A v and the classification test.";
+        return;
+      }
+
+      const vector = state.selectedVector;
+      const transformed = state.transformedVector;
+      const eigenCheck = isEigenvector(vector, transformed);
+      const cross = vector[0] * transformed[1] - vector[1] * transformed[0];
+      const lines = [
+        `v = ${formatVector(vector)}`,
+        `A v = ${formatVector(transformed)}`,
+        `zero test: ${isNullSpaceVector(vector, transformed) ? "A v = 0" : "A v ≠ 0"}`,
+        `same-line test: cross(v, A v) = ${formatNumber(cross)}`
+      ];
+      if (eigenCheck.isEigen) {
+        lines.push(`eigenvalue: λ = ${formatNumber(eigenCheck.eigenvalue)}`);
+      }
+      algebraOutput.textContent = lines.join("\n");
+    }
+
+    function playToneSequence(frequencies, seconds) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        return;
+      }
+
+      if (!playToneSequence.ctx) {
+        playToneSequence.ctx = new AudioContextClass();
+      }
+
+      const audioContext = playToneSequence.ctx;
+      const now = audioContext.currentTime;
+      frequencies.forEach((frequency, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "triangle";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, now + index * seconds);
+        gain.gain.exponentialRampToValueAtTime(0.06, now + index * seconds + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + index * seconds + seconds);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(now + index * seconds);
+        oscillator.stop(now + index * seconds + seconds);
+      });
+    }
+
+    function nextRound() {
+      state.round += 1;
+      prepareRound(true);
+    }
+
+    function nextLevel() {
+      state.levelIndex = (state.levelIndex + 1) % levelDefinitions.length;
+      const level = levelDefinitions[state.levelIndex];
+      setCurrentMatrix(level.matrix, level.description);
+    }
+
+    function applyTeacherMatrix() {
+      const matrix = [
+        [Number(document.getElementById("m11").value), Number(document.getElementById("m12").value)],
+        [Number(document.getElementById("m21").value), Number(document.getElementById("m22").value)]
+      ];
+
+      if (matrix.flat().some((value) => Number.isNaN(value))) {
+        updateFeedback("Invalid matrix", "Teacher mode expects four numeric entries.", "", "bad");
+        return;
+      }
+
+      state.levelIndex = -1;
+      setCurrentMatrix(matrix, "Teacher mode: using a custom matrix entered by the instructor.");
+      updateFeedback("Teacher mode active", "Custom matrix applied. Select a vector or regenerate random candidates.", "", "good");
+    }
+
+    function randomizeVectors() {
+      state.candidateVectors = generateCandidateVectors();
+      state.selectedVector = null;
+      state.transformedVector = [0, 0];
+      state.displayVector = [0, 0];
+      state.roundResolved = false;
+      renderVectorButtons();
+      updateControlStates();
+      updateAlgebraView();
+      drawScene();
+      updateFeedback("Vectors refreshed", "A fresh set of candidate vectors is ready.", "", "good");
+    }
+
+    function toggleTeacherMode() {
+      state.showTeacherMode = !state.showTeacherMode;
+      teacherBox.classList.toggle("open", state.showTeacherMode);
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      sidePanel.classList.toggle("show-algebra", mode === "algebra");
+      document.getElementById("geometricModeBtn").classList.toggle("active", mode === "geometric");
+      document.getElementById("algebraModeBtn").classList.toggle("active", mode === "algebra");
+    }
+
+    document.querySelectorAll(".classify-btn").forEach((button) => {
+      button.addEventListener("click", () => scoreSubmission(button.dataset.kind));
+    });
+    document.getElementById("nextRoundBtn").addEventListener("click", nextRound);
+    document.getElementById("changeLevelBtn").addEventListener("click", nextLevel);
+    document.getElementById("hintBtn").addEventListener("click", updateHint);
+    document.getElementById("teacherToggleBtn").addEventListener("click", toggleTeacherMode);
+    document.getElementById("applyTeacherMatrixBtn").addEventListener("click", applyTeacherMatrix);
+    document.getElementById("randomVectorsBtn").addEventListener("click", randomizeVectors);
+    document.getElementById("geometricModeBtn").addEventListener("click", () => setViewMode("geometric"));
+    document.getElementById("algebraModeBtn").addEventListener("click", () => setViewMode("algebra"));
+
+    // Initialize the game with the first level and a fresh set of vectors.
+    matrixDisplay.innerHTML = matrixToHtml(state.currentMatrix);
+    levelDescription.textContent = levelDefinitions[0].description;
+    updateStats();
+    prepareRound(true);
+    setViewMode("geometric");
+  </script>
+</body>
+</html>
