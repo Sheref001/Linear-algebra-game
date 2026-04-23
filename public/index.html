@@ -565,6 +565,11 @@
       gap: 10px;
     }
 
+    .auth-card.signed-in .signed-out-only,
+    .auth-card.signed-out .signed-in-only {
+      display: none;
+    }
+
     .auth-row {
       display: flex;
       gap: 10px;
@@ -908,20 +913,28 @@
           <button class="btn-secondary" id="teacherToggleBtn" type="button">Teacher Mode</button>
         </div>
 
-        <div class="info-card" style="margin-bottom: 12px;">
+        <div class="info-card auth-card signed-out" id="authCard" style="margin-bottom: 12px;">
           <h3>Player Account</h3>
           <div class="auth-grid">
-            <div class="status-pill offline" id="backendStatusPill">Backend not connected</div>
-            <div class="status-pill offline" id="authStatusPill">Signed out</div>
-            <input id="authEmail" type="text" placeholder="Email address" autocomplete="email" />
-            <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
-            <div class="auth-row">
-              <button class="btn-primary" id="signUpBtn" type="button">Create Account</button>
-              <button class="btn-secondary" id="signInBtn" type="button">Sign In</button>
+            <div class="status-pill signed-in-only" id="authStatusPill">Signed out</div>
+            <div class="auth-row signed-out-only">
               <button class="btn-secondary" id="googleSignInBtn" type="button">Continue with Google</button>
+            </div>
+            <details class="signed-out-only">
+              <summary class="small" style="cursor: pointer;">Use email instead</summary>
+              <div class="auth-grid" style="margin-top: 10px;">
+                <input id="authEmail" type="text" placeholder="Email address" autocomplete="email" />
+                <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+                <div class="auth-row">
+                  <button class="btn-primary" id="signUpBtn" type="button">Create Account</button>
+                  <button class="btn-secondary" id="signInBtn" type="button">Sign In</button>
+                </div>
+              </div>
+            </details>
+            <div class="auth-row signed-in-only">
               <button class="btn-secondary" id="signOutBtn" type="button">Sign Out</button>
             </div>
-            <div class="small" id="authMessage">Connect Supabase in <code>public/app-config.js</code> to enable registration, saved challenges, and result tracking.</div>
+            <div class="small" id="authMessage">Sign in to store challenges and save results.</div>
           </div>
         </div>
 
@@ -1178,7 +1191,7 @@
     const methodCards = document.getElementById("methodCards");
     const requestDemoBtn = document.getElementById("requestDemoBtn");
     const emailPilotBtn = document.getElementById("emailPilotBtn");
-    const backendStatusPill = document.getElementById("backendStatusPill");
+    const authCard = document.getElementById("authCard");
     const authStatusPill = document.getElementById("authStatusPill");
     const authEmail = document.getElementById("authEmail");
     const authPassword = document.getElementById("authPassword");
@@ -1592,13 +1605,11 @@
     }
 
     function updateBackendStatus() {
-      const backendText = state.backendReady ? "Backend connected" : "Backend not connected";
-      backendStatusPill.textContent = backendText;
-      backendStatusPill.classList.toggle("offline", !state.backendReady);
-
       const userText = state.currentUser ? `Signed in as ${state.currentUser.email}` : "Signed out";
       authStatusPill.textContent = userText;
       authStatusPill.classList.toggle("offline", !state.currentUser);
+      authCard.classList.toggle("signed-in", Boolean(state.currentUser));
+      authCard.classList.toggle("signed-out", !state.currentUser);
 
       signOutBtn.disabled = !state.currentUser;
       googleSignInBtn.disabled = !state.backendReady;
