@@ -1593,6 +1593,8 @@
       challengeBuzzed: false,
       challengeAnswered: false,
       challengeStartTime: 0,
+      challengeTimerId: null,
+      challengeTimeLimitMs: 30000,
       challengeCurrentQuestion: null,
       challengeSelectedAnswer: null,
       currentUser: null,
@@ -2599,7 +2601,7 @@
 
       if (!state.challengeAnswered) {
         challengeStatusText.textContent = state.challengeBuzzed
-          ? "Choose the best answer. Faster buzz-ins earn a small speed bonus."
+          ? `Choose the best answer within ${getChallengeSecondsLeft()} seconds. Faster answers earn a small speed bonus.`
           : "The buzzer keeps the reveal locked until the player commits to the question.";
       }
 
@@ -2700,7 +2702,56 @@
       }
       state.challengeBuzzed = true;
       state.challengeStartTime = performance.now();
+      startChallengeTimer();
       playToneSequence([660], 0.08);
+      renderChallenge();
+    }
+
+    function clearChallengeTimer() {
+      if (state.challengeTimerId) {
+        clearInterval(state.challengeTimerId);
+        state.challengeTimerId = null;
+      }
+    }
+
+    function getChallengeSecondsLeft() {
+      if (!state.challengeBuzzed || state.challengeAnswered || !state.challengeStartTime) {
+        return Math.ceil(state.challengeTimeLimitMs / 1000);
+      }
+      const remaining = Math.max(0, state.challengeTimeLimitMs - (performance.now() - state.challengeStartTime));
+      return Math.ceil(remaining / 1000);
+    }
+
+    function startChallengeTimer() {
+      clearChallengeTimer();
+      state.challengeTimerId = setInterval(() => {
+        if (state.challengeAnswered || !state.challengeBuzzed) {
+          clearChallengeTimer();
+          return;
+        }
+        const elapsed = performance.now() - state.challengeStartTime;
+        if (elapsed >= state.challengeTimeLimitMs) {
+          handleChallengeTimeout();
+          return;
+        }
+        renderChallenge();
+      }, 250);
+    }
+
+    function handleChallengeTimeout() {
+      if (state.challengeAnswered || !state.challengeBuzzed) {
+        return;
+      }
+      clearChallengeTimer();
+      state.challengeAnswered = true;
+      state.challengeSelectedAnswer = null;
+      state.challengeScore -= 1;
+      challengeStatusText.textContent = `Time expired. You lost 1 point. ${state.challengeCurrentQuestion.explanation}`;
+      if (state.challengeQuestionIndex === 9) {
+        challengeStatusText.textContent += ` Final score: ${state.challengeScore}.`;
+        saveChallengeCompletion();
+      }
+      playToneSequence([220, 180], 0.08);
       renderChallenge();
     }
 
@@ -2709,17 +2760,18 @@
         return;
       }
 
+      clearChallengeTimer();
       const question = state.challengeCurrentQuestion;
       const correct = selectedIndex === question.answer;
       const elapsedSeconds = Math.max(0, (performance.now() - state.challengeStartTime) / 1000);
       const speedBonus = correct ? Math.max(0, 3 - Math.floor(elapsedSeconds)) : 0;
-      state.challengeScore += correct ? 10 + speedBonus : 0;
+      state.challengeScore += correct ? 10 + speedBonus : -1;
       state.challengeAnswered = true;
       state.challengeSelectedAnswer = selectedIndex;
 
       challengeStatusText.textContent = correct
         ? `Correct. ${question.explanation}${speedBonus ? ` Speed bonus +${speedBonus}.` : ""}`
-        : `Incorrect. ${question.explanation}`;
+        : `Incorrect. You lost 1 point. ${question.explanation}`;
 
       if (state.challengeQuestionIndex === 9) {
         challengeStatusText.textContent += ` Final score: ${state.challengeScore} / 130.`;
@@ -2756,6 +2808,7 @@
       if (!state.friendChallenge || !state.challengeAnswered || state.challengeQuestionIndex >= 9) {
         return;
       }
+      clearChallengeTimer();
       state.challengeQuestionIndex += 1;
       state.challengeBuzzed = false;
       state.challengeAnswered = false;
@@ -2768,6 +2821,7 @@
       if (!state.friendChallenge) {
         return;
       }
+      clearChallengeTimer();
       state.challengeQuestionIndex = 0;
       state.challengeScore = 0;
       state.challengeBuzzed = false;
