@@ -918,6 +918,7 @@
             <div class="auth-row">
               <button class="btn-primary" id="signUpBtn" type="button">Create Account</button>
               <button class="btn-secondary" id="signInBtn" type="button">Sign In</button>
+              <button class="btn-secondary" id="googleSignInBtn" type="button">Continue with Google</button>
               <button class="btn-secondary" id="signOutBtn" type="button">Sign Out</button>
             </div>
             <div class="small" id="authMessage">Connect Supabase in <code>public/app-config.js</code> to enable registration, saved challenges, and result tracking.</div>
@@ -1183,6 +1184,7 @@
     const authPassword = document.getElementById("authPassword");
     const signUpBtn = document.getElementById("signUpBtn");
     const signInBtn = document.getElementById("signInBtn");
+    const googleSignInBtn = document.getElementById("googleSignInBtn");
     const signOutBtn = document.getElementById("signOutBtn");
     const authMessage = document.getElementById("authMessage");
     const challengeStorageNote = document.getElementById("challengeStorageNote");
@@ -1599,6 +1601,7 @@
       authStatusPill.classList.toggle("offline", !state.currentUser);
 
       signOutBtn.disabled = !state.currentUser;
+      googleSignInBtn.disabled = !state.backendReady;
       authMessage.textContent = state.backendReady
         ? state.currentUser
           ? "Your account is connected. You can create stored challenges and save results."
@@ -1682,6 +1685,24 @@
       }
       const { error } = await state.supabase.auth.signOut();
       authMessage.textContent = error ? error.message : "Signed out.";
+    }
+
+    async function signInWithGoogle() {
+      if (!state.backendReady) {
+        authMessage.textContent = "Backend is not configured yet. Add your Supabase URL and anon key in public/app-config.js.";
+        return;
+      }
+
+      const { error } = await state.supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: getConfiguredSiteUrl()
+        }
+      });
+
+      if (error) {
+        authMessage.textContent = error.message;
+      }
     }
 
     function createChallengeLink(challenge) {
@@ -2513,6 +2534,7 @@
     topicSelect.addEventListener("change", (event) => setTopic(event.target.value));
     signUpBtn.addEventListener("click", signUp);
     signInBtn.addEventListener("click", signIn);
+    googleSignInBtn.addEventListener("click", signInWithGoogle);
     signOutBtn.addEventListener("click", signOut);
     requestDemoBtn.addEventListener("click", () => {
       window.location.href = "mailto:hello@matrixarena.app?subject=Request%20a%20Matrix%20Arena%20demo&body=I%20want%20to%20pilot%20Matrix%20Arena%20for%20my%20course.";
