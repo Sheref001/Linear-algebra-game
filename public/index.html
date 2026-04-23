@@ -628,7 +628,8 @@
     .audience-card,
     .method-card,
     .topic-hero,
-    .cta-strip {
+    .cta-strip,
+    .compact-panel {
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 239, 0.96));
       border: 1px solid rgba(30, 41, 51, 0.08);
       border-radius: 24px;
@@ -689,6 +690,41 @@
       gap: 16px;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .compact-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .compact-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .mini-pricing {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mini-price-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(30, 41, 51, 0.04);
+      border: 1px solid rgba(30, 41, 51, 0.06);
+    }
+
+    .mini-price-row strong {
+      display: block;
+      margin-bottom: 2px;
     }
 
     .pricing-card.featured {
@@ -762,7 +798,8 @@
       .feature-grid,
       .pricing-grid,
       .audience-grid,
-      .method-grid {
+      .method-grid,
+      .compact-grid {
         grid-template-columns: 1fr;
       }
 
@@ -1065,82 +1102,55 @@
     <section class="panel stack">
       <div class="controls-head">
         <div>
-          <h2>Instructor Studio</h2>
-          <p>These are the product pieces that make the site monetizable for courses, tutoring centers, and departments.</p>
+          <h2>For Instructors</h2>
+          <p>A compact summary of how this can work as a course tool without turning the homepage into a pricing deck.</p>
         </div>
       </div>
-      <div class="audience-grid">
-        <div class="audience-card">
-          <h3>For Instructors</h3>
-          <ul class="feature-list">
+      <div class="compact-grid">
+        <div class="compact-panel">
+          <h3>Use Cases</h3>
+          <ul class="compact-list">
             <li>Assign challenge links as warm-up tasks before lecture.</li>
             <li>Track concept accuracy by topic: null space, diagonalization, Cayley-Hamilton, and method choice.</li>
+            <li>Run timed buzzer drills for tutoring, review sessions, and office hours.</li>
             <li>Use teacher mode to create custom matrices for class demos.</li>
           </ul>
         </div>
-        <div class="audience-card">
-          <h3>For Tutoring</h3>
-          <ul class="feature-list">
-            <li>Run timed buzzer drills for exam prep and office hours.</li>
-            <li>Show students why one computational route is cheaper than another.</li>
-            <li>Package topic tracks into premium review sessions.</li>
-          </ul>
-        </div>
-        <div class="audience-card">
-          <h3>For Departments</h3>
-          <ul class="feature-list">
-            <li>Offer a shared engagement tool across multiple sections.</li>
-            <li>Support common assessments with reusable challenge banks.</li>
-            <li>Gather adoption evidence before expanding to more courses.</li>
-          </ul>
+        <div class="compact-panel">
+          <h3>Pricing Snapshot</h3>
+          <div class="mini-pricing">
+            <div class="mini-price-row">
+              <div>
+                <strong>Free</strong>
+                <span class="small">Core arena and sample challenges</span>
+              </div>
+              <div>$0</div>
+            </div>
+            <div class="mini-price-row">
+              <div>
+                <strong>Instructor Pro</strong>
+                <span class="small">Assignments, analytics, full topic library</span>
+              </div>
+              <div>$29/mo</div>
+            </div>
+            <div class="mini-price-row">
+              <div>
+                <strong>Department</strong>
+                <span class="small">Shared access across sections</span>
+              </div>
+              <div>$1,250/yr</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="cta-strip">
         <div>
           <h3 style="margin-bottom: 6px;">Pilot this in a real course</h3>
-          <p class="small" style="margin: 0;">A paid version should lead with classroom analytics, reusable assignments, and instructor workflows.</p>
+          <p class="small" style="margin: 0;">Best positioned as a lightweight teaching tool with analytics and reusable assignments.</p>
         </div>
         <div class="button-row">
           <button class="btn-primary" id="requestDemoBtn" type="button">Request a Demo</button>
           <button class="btn-secondary" id="emailPilotBtn" type="button">Email Pilot Offer</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel stack">
-      <div class="controls-head">
-        <div>
-          <h2>Pricing Blueprint</h2>
-          <p>A simple structure that matches how educational buyers actually spend.</p>
-        </div>
-      </div>
-      <div class="pricing-grid">
-        <div class="pricing-card">
-          <span class="pricing-tag">Free</span>
-          <div class="price">$0 <small>/ forever</small></div>
-          <ul class="pricing-list">
-            <li>Core arena and sample challenge rounds.</li>
-            <li>Limited topic access.</li>
-            <li>Good for student discovery and viral sharing.</li>
-          </ul>
-        </div>
-        <div class="pricing-card featured">
-          <span class="pricing-tag">Instructor Pro</span>
-          <div class="price">$29 <small>/ month</small></div>
-          <ul class="pricing-list">
-            <li>Full topic library including diagonalization and Cayley-Hamilton.</li>
-            <li>Assignment links, class analytics, and challenge history.</li>
-            <li>Best entry product for individual professors.</li>
-          </ul>
-        </div>
-        <div class="pricing-card">
-          <span class="pricing-tag">Department</span>
-          <div class="price">$1,250 <small>/ year</small></div>
-          <ul class="pricing-list">
-            <li>Shared licenses across sections.</li>
-            <li>Instructor onboarding and branded deployment.</li>
-            <li>Best fit for schools, tutoring programs, and multi-section adoption.</li>
-          </ul>
         </div>
       </div>
     </section>
