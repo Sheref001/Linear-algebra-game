@@ -1599,6 +1599,11 @@
       authStatusPill.classList.toggle("offline", !state.currentUser);
 
       signOutBtn.disabled = !state.currentUser;
+      authMessage.textContent = state.backendReady
+        ? state.currentUser
+          ? "Your account is connected. You can create stored challenges and save results."
+          : "Backend is connected. Sign in or create an account to store challenges and results."
+        : "Connect Supabase in public/app-config.js to enable registration, saved challenges, and result tracking.";
       challengeStorageNote.textContent = state.currentUser && state.backendReady
         ? "Logged-in users create database-backed challenge links that can store results."
         : "Without login, challenge links use browser-encoded payloads instead of stored database records.";
