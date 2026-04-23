@@ -68,5 +68,17 @@ After that, users can:
 - sign in
 - generate database-backed challenge links
 - save challenge completion results
+- receive direct challenges by email target
+- see saved history and leaderboard data
 
 Without Supabase configured, the site still works, but challenge links use encoded browser data instead of stored database records.
+
+## Schema Update Note
+
+If you already ran an older version of `supabase-schema.sql`, run the current file again.
+
+The latest schema adds:
+
+- `profiles` table for user metadata and instructor roles
+- `invited_email` on `challenges`
+- profile policies used by the new inbox/history/instructor features

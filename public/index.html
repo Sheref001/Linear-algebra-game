@@ -566,6 +566,10 @@
       gap: 10px;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .auth-card.signed-in .signed-out-only,
     .auth-card.signed-out .signed-in-only {
       display: none;
@@ -592,6 +596,38 @@
     .status-pill.offline {
       background: rgba(239, 125, 50, 0.14);
       color: #9a4c11;
+    }
+
+    .list-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-item {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(30, 41, 51, 0.04);
+      border: 1px solid rgba(30, 41, 51, 0.06);
+    }
+
+    .list-item-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .muted-label {
+      color: var(--muted);
+      font-size: 0.84rem;
     }
 
     .topic-select {
@@ -948,7 +984,7 @@
           <button class="btn-secondary" id="changeLevelBtn" type="button">Next Level</button>
           <button class="btn-warning" id="hintBtn" type="button">Hint</button>
           <button class="btn-secondary" id="challengeFriendBtn" type="button">Challenge a Friend</button>
-          <button class="btn-secondary" id="teacherToggleBtn" type="button">Teacher Mode</button>
+          <button class="btn-secondary hidden" id="teacherToggleBtn" type="button">Teacher Mode</button>
         </div>
 
         <div class="info-card auth-card signed-out" id="authCard" style="margin-bottom: 12px;">
@@ -1035,6 +1071,8 @@
           <div class="challenge-grid">
             <label for="challengerName" class="small">Your name</label>
             <input id="challengerName" type="text" maxlength="50" placeholder="Professor, Team Blue, or your name" />
+            <label for="friendEmail" class="small">Friend email for direct challenge</label>
+            <input id="friendEmail" type="text" maxlength="120" placeholder="friend@example.com" />
           </div>
           <div class="teacher-row">
             <button class="btn-primary" id="generateChallengeBtn" type="button">Generate 10-Question Challenge</button>
@@ -1073,6 +1111,45 @@
         <div class="info-card" style="margin-top: 12px;">
           <h3>Concept Radar</h3>
           <ul id="conceptRadarList"></ul>
+        </div>
+
+        <div class="info-card list-card" style="margin-top: 12px;">
+          <div class="controls-head" style="margin-bottom: 0;">
+            <div>
+              <h3>Challenge Inbox</h3>
+              <p class="small">Direct challenges sent to your signed-in email.</p>
+            </div>
+            <button class="btn-secondary" id="refreshInboxBtn" type="button">Refresh</button>
+          </div>
+          <div class="list-stack" id="challengeInboxList">
+            <div class="small">Sign in to see direct challenges.</div>
+          </div>
+        </div>
+
+        <div class="info-card list-card" style="margin-top: 12px;">
+          <div class="controls-head" style="margin-bottom: 0;">
+            <div>
+              <h3>Recent Activity</h3>
+              <p class="small">Your saved challenge results.</p>
+            </div>
+            <button class="btn-secondary" id="refreshHistoryBtn" type="button">Refresh</button>
+          </div>
+          <div class="list-stack" id="historyList">
+            <div class="small">Sign in to see saved history.</div>
+          </div>
+        </div>
+
+        <div class="info-card list-card" style="margin-top: 12px;">
+          <div class="controls-head" style="margin-bottom: 0;">
+            <div>
+              <h3>Leaderboard</h3>
+              <p class="small">Top saved scores across Matrix Arena.</p>
+            </div>
+            <button class="btn-secondary" id="refreshLeaderboardBtn" type="button">Refresh</button>
+          </div>
+          <div class="list-stack" id="leaderboardList">
+            <div class="small">Leaderboard will appear once saved attempts exist.</div>
+          </div>
         </div>
       </aside>
     </section>
@@ -1178,8 +1255,10 @@
     const lambdaGuess = document.getElementById("lambdaGuess");
     const sidePanel = document.getElementById("sidePanel");
     const teacherBox = document.getElementById("teacherBox");
+    const teacherToggleBtn = document.getElementById("teacherToggleBtn");
     const challengeBox = document.getElementById("challengeBox");
     const challengerName = document.getElementById("challengerName");
+    const friendEmail = document.getElementById("friendEmail");
     const challengeLinkOutput = document.getElementById("challengeLinkOutput");
     const challengeModeBadge = document.getElementById("challengeModeBadge");
     const challengeIntro = document.getElementById("challengeIntro");
@@ -1212,6 +1291,12 @@
     const signOutBtn = document.getElementById("signOutBtn");
     const authMessage = document.getElementById("authMessage");
     const challengeStorageNote = document.getElementById("challengeStorageNote");
+    const challengeInboxList = document.getElementById("challengeInboxList");
+    const historyList = document.getElementById("historyList");
+    const leaderboardList = document.getElementById("leaderboardList");
+    const refreshInboxBtn = document.getElementById("refreshInboxBtn");
+    const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+    const refreshLeaderboardBtn = document.getElementById("refreshLeaderboardBtn");
 
     const topicPacks = {
       spectral: {
@@ -1510,8 +1595,10 @@
       challengeCurrentQuestion: null,
       challengeSelectedAnswer: null,
       currentUser: null,
+      currentProfile: null,
       supabase: null,
-      backendReady: false
+      backendReady: false,
+      isInstructor: false
     };
 
     const EPSILON = 1e-8;
@@ -1621,6 +1708,8 @@
       authStatusPill.classList.toggle("offline", !state.currentUser);
       authCard.classList.toggle("signed-in", Boolean(state.currentUser));
       authCard.classList.toggle("signed-out", !state.currentUser);
+      teacherToggleBtn.classList.toggle("hidden", !state.isInstructor);
+      teacherBox.classList.toggle("open", state.showTeacherMode && state.isInstructor);
 
       signOutBtn.disabled = !state.currentUser;
       googleSignInBtn.disabled = !state.backendReady;
@@ -1634,12 +1723,80 @@
         : "Without login, challenge links use browser-encoded payloads instead of stored database records.";
     }
 
+    function formatDateTime(value) {
+      if (!value) {
+        return "";
+      }
+      return new Date(value).toLocaleString();
+    }
+
     function getConfiguredSiteUrl() {
       const config = window.MATRIX_ARENA_CONFIG || {};
       if (config.siteUrl && /^https?:\/\//.test(config.siteUrl)) {
         return config.siteUrl;
       }
       return window.location.origin;
+    }
+
+    function getInstructorAllowlist() {
+      const config = window.MATRIX_ARENA_CONFIG || {};
+      return Array.isArray(config.instructorEmails) ? config.instructorEmails.map((email) => email.toLowerCase()) : [];
+    }
+
+    function renderPlaceholderList(target, message) {
+      target.innerHTML = `<div class="small">${message}</div>`;
+    }
+
+    function isInstructorUser(profile) {
+      const email = state.currentUser && state.currentUser.email ? state.currentUser.email.toLowerCase() : "";
+      const allowlist = getInstructorAllowlist();
+      return Boolean((profile && profile.role === "instructor") || (email && allowlist.includes(email)));
+    }
+
+    async function ensureProfile() {
+      if (!state.backendReady || !state.currentUser) {
+        state.currentProfile = null;
+        state.isInstructor = false;
+        updateBackendStatus();
+        return;
+      }
+
+      const fallbackName = state.currentUser.user_metadata && (state.currentUser.user_metadata.full_name || state.currentUser.user_metadata.name)
+        ? state.currentUser.user_metadata.full_name || state.currentUser.user_metadata.name
+        : state.currentUser.email.split("@")[0];
+
+      const payload = {
+        id: state.currentUser.id,
+        email: state.currentUser.email,
+        display_name: fallbackName
+      };
+
+      const { data, error } = await state.supabase
+        .from("profiles")
+        .upsert(payload, { onConflict: "id" })
+        .select("id, email, display_name, role")
+        .single();
+
+      if (error) {
+        authMessage.textContent = `Profile setup failed: ${error.message}`;
+        state.currentProfile = null;
+      } else {
+        state.currentProfile = data;
+      }
+
+      state.isInstructor = isInstructorUser(state.currentProfile);
+      if (!state.isInstructor) {
+        state.showTeacherMode = false;
+      }
+      updateBackendStatus();
+    }
+
+    async function refreshDashboardData() {
+      await Promise.all([
+        fetchChallengeInbox(),
+        fetchChallengeHistory(),
+        fetchLeaderboard()
+      ]);
     }
 
     async function initBackend() {
@@ -1656,9 +1813,13 @@
       if (!error && data && data.session) {
         state.currentUser = data.session.user;
       }
+      await ensureProfile();
+      await refreshDashboardData();
 
-      state.supabase.auth.onAuthStateChange((_event, session) => {
+      state.supabase.auth.onAuthStateChange(async (_event, session) => {
         state.currentUser = session ? session.user : null;
+        await ensureProfile();
+        await refreshDashboardData();
         updateBackendStatus();
       });
 
@@ -1745,11 +1906,14 @@
         return null;
       }
 
+       const invitedEmail = friendEmail.value.trim().toLowerCase();
+
       const { data, error } = await state.supabase
         .from("challenges")
         .insert({
           owner_id: state.currentUser.id,
           owner_name: challenge.challenger,
+          invited_email: invitedEmail || null,
           payload: challenge
         })
         .select("id")
@@ -1799,7 +1963,7 @@
 
       const { data, error } = await state.supabase
         .from("challenges")
-        .select("id, owner_name, payload")
+        .select("id, owner_name, invited_email, payload")
         .eq("id", challengeId)
         .single();
 
@@ -1820,6 +1984,144 @@
       challengeBox.classList.add("open");
       renderChallenge();
       return true;
+    }
+
+    async function fetchChallengeInbox() {
+      if (!state.backendReady || !state.currentUser) {
+        renderPlaceholderList(challengeInboxList, "Sign in to see direct challenges.");
+        return;
+      }
+
+      const email = state.currentUser.email;
+      const { data, error } = await state.supabase
+        .from("challenges")
+        .select("id, owner_name, invited_email, payload, created_at")
+        .eq("invited_email", email.toLowerCase())
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (error) {
+        renderPlaceholderList(challengeInboxList, `Inbox load failed: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        renderPlaceholderList(challengeInboxList, "No direct challenges yet.");
+        return;
+      }
+
+      challengeInboxList.innerHTML = "";
+      data.forEach((item) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "list-item";
+        const playButtonId = `play-${item.id}`;
+        wrapper.innerHTML = `
+          <div class="list-item-head">
+            <div>
+              <strong>${item.owner_name}</strong>
+              <div class="muted-label">Sent ${formatDateTime(item.created_at)}</div>
+            </div>
+            <button class="btn-primary" id="${playButtonId}" type="button">Play</button>
+          </div>
+          <div class="small">10-question challenge delivered to ${item.invited_email}.</div>
+        `;
+        challengeInboxList.appendChild(wrapper);
+        wrapper.querySelector(`#${playButtonId}`).addEventListener("click", () => {
+          state.friendChallenge = item.payload;
+          state.friendChallengeId = item.id;
+          state.challengeQuestionIndex = 0;
+          state.challengeScore = 0;
+          state.challengeBuzzed = false;
+          state.challengeAnswered = false;
+          state.challengeCurrentQuestion = item.payload.questions[0];
+          state.challengeSelectedAnswer = null;
+          state.showChallengeMode = true;
+          challengeBox.classList.add("open");
+          renderChallenge();
+          challengeStatusText.textContent = `Loaded challenge from ${item.owner_name}.`;
+        });
+      });
+    }
+
+    async function fetchChallengeHistory() {
+      if (!state.backendReady || !state.currentUser) {
+        renderPlaceholderList(historyList, "Sign in to see saved history.");
+        return;
+      }
+
+      const { data, error } = await state.supabase
+        .from("challenge_attempts")
+        .select("id, challenge_id, player_name, score, created_at")
+        .eq("player_id", state.currentUser.id)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (error) {
+        renderPlaceholderList(historyList, `History load failed: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        renderPlaceholderList(historyList, "No saved attempts yet.");
+        return;
+      }
+
+      historyList.innerHTML = "";
+      data.forEach((item) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "list-item";
+        wrapper.innerHTML = `
+          <div class="list-item-head">
+            <div>
+              <strong>${item.score} points</strong>
+              <div class="muted-label">${formatDateTime(item.created_at)}</div>
+            </div>
+            <div class="muted-label">Challenge ${item.challenge_id.slice(0, 8)}</div>
+          </div>
+          <div class="small">Saved as ${item.player_name}.</div>
+        `;
+        historyList.appendChild(wrapper);
+      });
+    }
+
+    async function fetchLeaderboard() {
+      if (!state.backendReady) {
+        renderPlaceholderList(leaderboardList, "Connect the backend to load leaderboard data.");
+        return;
+      }
+
+      const { data, error } = await state.supabase
+        .from("challenge_attempts")
+        .select("id, player_name, score, created_at")
+        .order("score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) {
+        renderPlaceholderList(leaderboardList, `Leaderboard load failed: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        renderPlaceholderList(leaderboardList, "Leaderboard will appear once saved attempts exist.");
+        return;
+      }
+
+      leaderboardList.innerHTML = "";
+      data.forEach((item, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "list-item";
+        wrapper.innerHTML = `
+          <div class="list-item-head">
+            <div>
+              <strong>#${index + 1} ${item.player_name}</strong>
+              <div class="muted-label">${formatDateTime(item.created_at)}</div>
+            </div>
+            <div><strong>${item.score}</strong></div>
+          </div>
+        `;
+        leaderboardList.appendChild(wrapper);
+      });
     }
 
     function renderTopicPack() {
@@ -2292,8 +2594,14 @@
 
     async function generateFriendChallengeLink() {
       const challenge = buildFriendChallenge(challengerName.value.trim());
+      const directEmail = friendEmail.value.trim();
       let link = createChallengeLink(challenge);
       let storedId = null;
+
+      if (directEmail && (!state.backendReady || !state.currentUser)) {
+        challengeStatusText.textContent = "Sign in first if you want to target a specific friend by email.";
+        return;
+      }
 
       if (state.backendReady && state.currentUser) {
         storedId = await saveChallengeToDatabase(challenge);
@@ -2316,8 +2624,13 @@
       state.challengeSelectedAnswer = null;
       challengeLinkOutput.textContent = link;
       challengeStatusText.textContent = storedId
-        ? "Database-backed challenge generated. Results can now be saved."
+        ? directEmail
+          ? `Database-backed challenge generated and addressed to ${directEmail}.`
+          : "Database-backed challenge generated. Results can now be saved."
         : "Challenge generated. Copy or share the link with a friend.";
+      if (state.backendReady) {
+        fetchChallengeInbox();
+      }
       renderChallenge();
     }
 
@@ -2409,6 +2722,7 @@
         challengeStatusText.textContent += ` Result save failed: ${error.message}`;
       } else {
         challengeStatusText.textContent += " Result saved.";
+        refreshDashboardData();
       }
     }
 
@@ -2527,6 +2841,9 @@
     }
 
     function toggleTeacherMode() {
+      if (!state.isInstructor) {
+        return;
+      }
       state.showTeacherMode = !state.showTeacherMode;
       teacherBox.classList.toggle("open", state.showTeacherMode);
     }
@@ -2545,7 +2862,7 @@
     document.getElementById("changeLevelBtn").addEventListener("click", nextLevel);
     document.getElementById("hintBtn").addEventListener("click", updateHint);
     document.getElementById("challengeFriendBtn").addEventListener("click", toggleChallengeMode);
-    document.getElementById("teacherToggleBtn").addEventListener("click", toggleTeacherMode);
+    teacherToggleBtn.addEventListener("click", toggleTeacherMode);
     document.getElementById("applyTeacherMatrixBtn").addEventListener("click", applyTeacherMatrix);
     document.getElementById("randomVectorsBtn").addEventListener("click", randomizeVectors);
     document.getElementById("geometricModeBtn").addEventListener("click", () => setViewMode("geometric"));
@@ -2558,6 +2875,9 @@
     signInBtn.addEventListener("click", signIn);
     googleSignInBtn.addEventListener("click", signInWithGoogle);
     signOutBtn.addEventListener("click", signOut);
+    refreshInboxBtn.addEventListener("click", fetchChallengeInbox);
+    refreshHistoryBtn.addEventListener("click", fetchChallengeHistory);
+    refreshLeaderboardBtn.addEventListener("click", fetchLeaderboard);
     requestDemoBtn.addEventListener("click", () => {
       window.location.href = "mailto:hello@matrixarena.app?subject=Request%20a%20Matrix%20Arena%20demo&body=I%20want%20to%20pilot%20Matrix%20Arena%20for%20my%20course.";
     });
