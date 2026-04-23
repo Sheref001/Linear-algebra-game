@@ -66,7 +66,7 @@ After that, users can:
 
 - create accounts
 - sign in
-- generate database-backed challenge links
+- generate short database-backed challenge links
 - save challenge completion results
 - receive direct challenges by email target
 - see saved history and leaderboard data

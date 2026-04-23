@@ -1703,6 +1703,13 @@
       };
     }
 
+    function generateShortCode(length = 8) {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const bytes = new Uint8Array(length);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
+    }
+
     function updateBackendStatus() {
       const userText = state.currentUser ? `Signed in as ${state.currentUser.email}` : "Signed out";
       authStatusPill.textContent = userText;
@@ -1902,12 +1909,19 @@
       return url.toString();
     }
 
+    function createShortChallengeLink(shortCode) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("c", shortCode);
+      return url.toString();
+    }
+
     async function saveChallengeToDatabase(challenge) {
       if (!state.backendReady || !state.currentUser) {
         return null;
       }
 
-       const invitedEmail = friendEmail.value.trim().toLowerCase();
+      const invitedEmail = friendEmail.value.trim().toLowerCase();
+      const shortCode = generateShortCode();
 
       const { data, error } = await state.supabase
         .from("challenges")
@@ -1915,9 +1929,10 @@
           owner_id: state.currentUser.id,
           owner_name: challenge.challenger,
           invited_email: invitedEmail || null,
+          short_code: shortCode,
           payload: challenge
         })
-        .select("id")
+        .select("id, short_code")
         .single();
 
       if (error) {
@@ -1925,7 +1940,7 @@
         return null;
       }
 
-      return data.id;
+      return data;
     }
 
     function loadChallengeFromUrl() {
@@ -1958,15 +1973,18 @@
     async function loadStoredChallengeFromUrl() {
       const params = new URLSearchParams(window.location.search);
       const challengeId = params.get("challengeId");
-      if (!challengeId || !state.backendReady) {
+      const challengeCode = params.get("c");
+      if ((!challengeId && !challengeCode) || !state.backendReady) {
         return false;
       }
 
-      const { data, error } = await state.supabase
+      let query = state.supabase
         .from("challenges")
-        .select("id, owner_name, invited_email, payload")
-        .eq("id", challengeId)
-        .single();
+        .select("id, owner_name, invited_email, short_code, payload");
+
+      query = challengeCode ? query.eq("short_code", challengeCode) : query.eq("id", challengeId);
+
+      const { data, error } = await query.single();
 
       if (error || !data || !data.payload || !Array.isArray(data.payload.questions)) {
         challengeStatusText.textContent = "The stored challenge could not be loaded.";
@@ -2602,7 +2620,7 @@
       const challenge = buildFriendChallenge(challengerName.value.trim());
       const directEmail = friendEmail.value.trim();
       let link = createChallengeLink(challenge);
-      let storedId = null;
+      let storedChallenge = null;
 
       if (directEmail && (!state.backendReady || !state.currentUser)) {
         challengeStatusText.textContent = "Sign in first if you want to target a specific friend by email.";
@@ -2610,12 +2628,14 @@
       }
 
       if (state.backendReady && state.currentUser) {
-        storedId = await saveChallengeToDatabase(challenge);
+        storedChallenge = await saveChallengeToDatabase(challenge);
       }
 
-      if (storedId) {
-        link = createStoredChallengeLink(storedId);
-        state.friendChallengeId = storedId;
+      if (storedChallenge) {
+        link = storedChallenge.short_code
+          ? createShortChallengeLink(storedChallenge.short_code)
+          : createStoredChallengeLink(storedChallenge.id);
+        state.friendChallengeId = storedChallenge.id;
       } else {
         state.friendChallengeId = null;
       }
@@ -2629,10 +2649,10 @@
       state.challengeCurrentQuestion = challenge.questions[0];
       state.challengeSelectedAnswer = null;
       challengeLinkOutput.textContent = link;
-      challengeStatusText.textContent = storedId
+      challengeStatusText.textContent = storedChallenge
         ? directEmail
           ? `Database-backed challenge generated and addressed to ${directEmail}.`
-          : "Database-backed challenge generated. Results can now be saved."
+          : "Short database-backed challenge link generated. Results can now be saved."
         : "Challenge generated. Copy or share the link with a friend.";
       if (state.backendReady) {
         fetchChallengeInbox();

@@ -13,6 +13,7 @@ create table if not exists public.challenges (
   owner_id uuid references auth.users(id) on delete set null,
   owner_name text not null,
   invited_email text,
+  short_code text unique,
   payload jsonb not null,
   created_at timestamptz not null default now()
 );
@@ -27,7 +28,9 @@ create table if not exists public.challenge_attempts (
 );
 
 alter table public.challenges add column if not exists invited_email text;
+alter table public.challenges add column if not exists short_code text;
 alter table public.challenge_attempts add column if not exists player_id uuid references auth.users(id) on delete set null;
+create unique index if not exists challenges_short_code_key on public.challenges(short_code);
 
 alter table public.profiles enable row level security;
 alter table public.challenges enable row level security;
