@@ -388,7 +388,8 @@
 
     textarea,
     input[type="number"],
-    input[type="text"] {
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       border: 1px solid rgba(30, 41, 51, 0.14);
       border-radius: 16px;
@@ -557,6 +558,34 @@
     .challenge-summary {
       display: grid;
       gap: 8px;
+    }
+
+    .auth-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .auth-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(11, 143, 135, 0.1);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .status-pill.offline {
+      background: rgba(239, 125, 50, 0.14);
+      color: #9a4c11;
     }
 
     .topic-select {
@@ -880,6 +909,22 @@
         </div>
 
         <div class="info-card" style="margin-bottom: 12px;">
+          <h3>Player Account</h3>
+          <div class="auth-grid">
+            <div class="status-pill offline" id="backendStatusPill">Backend not connected</div>
+            <div class="status-pill offline" id="authStatusPill">Signed out</div>
+            <input id="authEmail" type="text" placeholder="Email address" autocomplete="email" />
+            <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+            <div class="auth-row">
+              <button class="btn-primary" id="signUpBtn" type="button">Create Account</button>
+              <button class="btn-secondary" id="signInBtn" type="button">Sign In</button>
+              <button class="btn-secondary" id="signOutBtn" type="button">Sign Out</button>
+            </div>
+            <div class="small" id="authMessage">Connect Supabase in <code>public/app-config.js</code> to enable registration, saved challenges, and result tracking.</div>
+          </div>
+        </div>
+
+        <div class="info-card" style="margin-bottom: 12px;">
           <h3>Learning Track</h3>
           <p>Switch the page focus between foundational geometry, diagonalization, Cayley-Hamilton, and numerical methods.</p>
           <select class="topic-select" id="topicSelect">
@@ -947,6 +992,7 @@
           <div class="info-card">
             <strong>Challenge Link</strong>
             <div class="challenge-link" id="challengeLinkOutput">Generate a challenge to create a shareable link.</div>
+            <div class="small" id="challengeStorageNote" style="margin-top: 8px;">Without login, challenge links use browser-encoded payloads instead of stored database records.</div>
           </div>
           <div class="info-card challenge-layout" id="challengePlayCard">
             <div class="challenge-header">
@@ -1088,6 +1134,8 @@
     <div class="footer-note">Built as a browser-based teaching game for undergraduate linear algebra.</div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./app-config.js"></script>
   <script>
     const canvas = document.getElementById("arenaCanvas");
     const ctx = canvas.getContext("2d");
@@ -1129,6 +1177,15 @@
     const methodCards = document.getElementById("methodCards");
     const requestDemoBtn = document.getElementById("requestDemoBtn");
     const emailPilotBtn = document.getElementById("emailPilotBtn");
+    const backendStatusPill = document.getElementById("backendStatusPill");
+    const authStatusPill = document.getElementById("authStatusPill");
+    const authEmail = document.getElementById("authEmail");
+    const authPassword = document.getElementById("authPassword");
+    const signUpBtn = document.getElementById("signUpBtn");
+    const signInBtn = document.getElementById("signInBtn");
+    const signOutBtn = document.getElementById("signOutBtn");
+    const authMessage = document.getElementById("authMessage");
+    const challengeStorageNote = document.getElementById("challengeStorageNote");
 
     const topicPacks = {
       spectral: {
@@ -1418,13 +1475,17 @@
       roundResolved: false,
       friendChallengeLink: "",
       friendChallenge: null,
+      friendChallengeId: null,
       challengeQuestionIndex: 0,
       challengeScore: 0,
       challengeBuzzed: false,
       challengeAnswered: false,
       challengeStartTime: 0,
       challengeCurrentQuestion: null,
-      challengeSelectedAnswer: null
+      challengeSelectedAnswer: null,
+      currentUser: null,
+      supabase: null,
+      backendReady: false
     };
 
     const EPSILON = 1e-8;
@@ -1528,11 +1589,116 @@
       };
     }
 
+    function updateBackendStatus() {
+      const backendText = state.backendReady ? "Backend connected" : "Backend not connected";
+      backendStatusPill.textContent = backendText;
+      backendStatusPill.classList.toggle("offline", !state.backendReady);
+
+      const userText = state.currentUser ? `Signed in as ${state.currentUser.email}` : "Signed out";
+      authStatusPill.textContent = userText;
+      authStatusPill.classList.toggle("offline", !state.currentUser);
+
+      signOutBtn.disabled = !state.currentUser;
+      challengeStorageNote.textContent = state.currentUser && state.backendReady
+        ? "Logged-in users create database-backed challenge links that can store results."
+        : "Without login, challenge links use browser-encoded payloads instead of stored database records.";
+    }
+
+    async function initBackend() {
+      const config = window.MATRIX_ARENA_CONFIG || {};
+      if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase || !window.supabase.createClient) {
+        updateBackendStatus();
+        return;
+      }
+
+      state.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      state.backendReady = true;
+
+      const { data, error } = await state.supabase.auth.getSession();
+      if (!error && data && data.session) {
+        state.currentUser = data.session.user;
+      }
+
+      state.supabase.auth.onAuthStateChange((_event, session) => {
+        state.currentUser = session ? session.user : null;
+        updateBackendStatus();
+      });
+
+      updateBackendStatus();
+    }
+
+    async function signUp() {
+      if (!state.backendReady) {
+        authMessage.textContent = "Backend is not configured yet. Add your Supabase URL and anon key in public/app-config.js.";
+        return;
+      }
+      const email = authEmail.value.trim();
+      const password = authPassword.value.trim();
+      if (!email || !password) {
+        authMessage.textContent = "Enter both email and password.";
+        return;
+      }
+      const { error } = await state.supabase.auth.signUp({ email, password });
+      authMessage.textContent = error ? error.message : "Account created. Check your email if confirmation is enabled.";
+    }
+
+    async function signIn() {
+      if (!state.backendReady) {
+        authMessage.textContent = "Backend is not configured yet. Add your Supabase URL and anon key in public/app-config.js.";
+        return;
+      }
+      const email = authEmail.value.trim();
+      const password = authPassword.value.trim();
+      if (!email || !password) {
+        authMessage.textContent = "Enter both email and password.";
+        return;
+      }
+      const { error } = await state.supabase.auth.signInWithPassword({ email, password });
+      authMessage.textContent = error ? error.message : "Signed in.";
+    }
+
+    async function signOut() {
+      if (!state.backendReady) {
+        return;
+      }
+      const { error } = await state.supabase.auth.signOut();
+      authMessage.textContent = error ? error.message : "Signed out.";
+    }
+
     function createChallengeLink(challenge) {
       const payload = toBase64Url(JSON.stringify(challenge));
       const url = new URL(window.location.href);
       url.searchParams.set("challenge", payload);
       return url.toString();
+    }
+
+    function createStoredChallengeLink(challengeId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("challengeId", challengeId);
+      return url.toString();
+    }
+
+    async function saveChallengeToDatabase(challenge) {
+      if (!state.backendReady || !state.currentUser) {
+        return null;
+      }
+
+      const { data, error } = await state.supabase
+        .from("challenges")
+        .insert({
+          owner_id: state.currentUser.id,
+          owner_name: challenge.challenger,
+          payload: challenge
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        authMessage.textContent = `Challenge save failed: ${error.message}`;
+        return null;
+      }
+
+      return data.id;
     }
 
     function loadChallengeFromUrl() {
@@ -1560,6 +1726,38 @@
       } catch (error) {
         challengeStatusText.textContent = "The shared challenge link could not be read.";
       }
+    }
+
+    async function loadStoredChallengeFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const challengeId = params.get("challengeId");
+      if (!challengeId || !state.backendReady) {
+        return false;
+      }
+
+      const { data, error } = await state.supabase
+        .from("challenges")
+        .select("id, owner_name, payload")
+        .eq("id", challengeId)
+        .single();
+
+      if (error || !data || !data.payload || !Array.isArray(data.payload.questions)) {
+        challengeStatusText.textContent = "The stored challenge could not be loaded.";
+        return false;
+      }
+
+      state.friendChallenge = data.payload;
+      state.friendChallengeId = data.id;
+      state.challengeQuestionIndex = 0;
+      state.challengeScore = 0;
+      state.challengeBuzzed = false;
+      state.challengeAnswered = false;
+      state.challengeCurrentQuestion = data.payload.questions[0];
+      state.challengeSelectedAnswer = null;
+      state.showChallengeMode = true;
+      challengeBox.classList.add("open");
+      renderChallenge();
+      return true;
     }
 
     function renderTopicPack() {
@@ -2030,17 +2228,40 @@
       challengeBox.classList.toggle("open", state.showChallengeMode);
     }
 
-    function generateFriendChallengeLink() {
+    async function generateFriendChallengeLink() {
       const challenge = buildFriendChallenge(challengerName.value.trim());
-      const link = createChallengeLink(challenge);
+      let link = createChallengeLink(challenge);
+      let storedId = null;
+
+      if (state.backendReady && state.currentUser) {
+        storedId = await saveChallengeToDatabase(challenge);
+      }
+
+      if (storedId) {
+        link = createStoredChallengeLink(storedId);
+        state.friendChallengeId = storedId;
+      } else {
+        state.friendChallengeId = null;
+      }
+
       state.friendChallengeLink = link;
+      state.friendChallenge = challenge;
+      state.challengeQuestionIndex = 0;
+      state.challengeScore = 0;
+      state.challengeBuzzed = false;
+      state.challengeAnswered = false;
+      state.challengeCurrentQuestion = challenge.questions[0];
+      state.challengeSelectedAnswer = null;
       challengeLinkOutput.textContent = link;
-      challengeStatusText.textContent = "Challenge generated. Copy or share the link with a friend.";
+      challengeStatusText.textContent = storedId
+        ? "Database-backed challenge generated. Results can now be saved."
+        : "Challenge generated. Copy or share the link with a friend.";
+      renderChallenge();
     }
 
     async function copyChallengeLink() {
       if (!state.friendChallengeLink) {
-        generateFriendChallengeLink();
+        await generateFriendChallengeLink();
       }
       try {
         await navigator.clipboard.writeText(state.friendChallengeLink);
@@ -2052,7 +2273,7 @@
 
     async function shareChallengeLink() {
       if (!state.friendChallengeLink) {
-        generateFriendChallengeLink();
+        await generateFriendChallengeLink();
       }
       if (navigator.share) {
         try {
@@ -2101,10 +2322,32 @@
 
       if (state.challengeQuestionIndex === 9) {
         challengeStatusText.textContent += ` Final score: ${state.challengeScore} / 130.`;
+        saveChallengeCompletion();
       }
 
       playToneSequence(correct ? [440, 660] : [220, 180], 0.08);
       renderChallenge();
+    }
+
+    async function saveChallengeCompletion() {
+      if (!state.backendReady || !state.friendChallengeId) {
+        return;
+      }
+
+      const challengerNameValue = challengerName.value.trim();
+      const playerName = challengerNameValue || (state.currentUser ? state.currentUser.email : "Guest player");
+      const { error } = await state.supabase.from("challenge_attempts").insert({
+        challenge_id: state.friendChallengeId,
+        player_id: state.currentUser ? state.currentUser.id : null,
+        player_name: playerName,
+        score: state.challengeScore
+      });
+
+      if (error) {
+        challengeStatusText.textContent += ` Result save failed: ${error.message}`;
+      } else {
+        challengeStatusText.textContent += " Result saved.";
+      }
     }
 
     function nextChallengeQuestion() {
@@ -2249,6 +2492,9 @@
     document.getElementById("copyChallengeBtn").addEventListener("click", copyChallengeLink);
     document.getElementById("shareChallengeBtn").addEventListener("click", shareChallengeLink);
     topicSelect.addEventListener("change", (event) => setTopic(event.target.value));
+    signUpBtn.addEventListener("click", signUp);
+    signInBtn.addEventListener("click", signIn);
+    signOutBtn.addEventListener("click", signOut);
     requestDemoBtn.addEventListener("click", () => {
       window.location.href = "mailto:hello@matrixarena.app?subject=Request%20a%20Matrix%20Arena%20demo&body=I%20want%20to%20pilot%20Matrix%20Arena%20for%20my%20course.";
     });
@@ -2266,7 +2512,13 @@
     prepareRound(true);
     setViewMode("geometric");
     renderTopicPack();
-    loadChallengeFromUrl();
+    updateBackendStatus();
+    initBackend().then(async () => {
+      const loadedStored = await loadStoredChallengeFromUrl();
+      if (!loadedStored) {
+        loadChallengeFromUrl();
+      }
+    });
   </script>
 </body>
 </html>
