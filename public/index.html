@@ -1604,6 +1604,14 @@
         : "Without login, challenge links use browser-encoded payloads instead of stored database records.";
     }
 
+    function getConfiguredSiteUrl() {
+      const config = window.MATRIX_ARENA_CONFIG || {};
+      if (config.siteUrl && /^https?:\/\//.test(config.siteUrl)) {
+        return config.siteUrl;
+      }
+      return window.location.origin;
+    }
+
     async function initBackend() {
       const config = window.MATRIX_ARENA_CONFIG || {};
       if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase || !window.supabase.createClient) {
@@ -1638,7 +1646,13 @@
         authMessage.textContent = "Enter both email and password.";
         return;
       }
-      const { error } = await state.supabase.auth.signUp({ email, password });
+      const { error } = await state.supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: getConfiguredSiteUrl()
+        }
+      });
       authMessage.textContent = error ? error.message : "Account created. Check your email if confirmation is enabled.";
     }
 
