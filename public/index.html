@@ -1270,6 +1270,7 @@
     const buzzBtn = document.getElementById("buzzBtn");
     const nextChallengeQuestionBtn = document.getElementById("nextChallengeQuestionBtn");
     const restartChallengeBtn = document.getElementById("restartChallengeBtn");
+    const challengeFriendBtn = document.getElementById("challengeFriendBtn");
     const topicSelect = document.getElementById("topicSelect");
     const conceptRadarList = document.getElementById("conceptRadarList");
     const topicKicker = document.getElementById("topicKicker");
@@ -2590,6 +2591,11 @@
     function toggleChallengeMode() {
       state.showChallengeMode = !state.showChallengeMode;
       challengeBox.classList.toggle("open", state.showChallengeMode);
+      challengeFriendBtn.classList.toggle("active", state.showChallengeMode);
+      if (state.showChallengeMode) {
+        challengeBox.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(() => challengerName.focus(), 120);
+      }
     }
 
     async function generateFriendChallengeLink() {
@@ -2861,7 +2867,7 @@
     document.getElementById("nextRoundBtn").addEventListener("click", nextRound);
     document.getElementById("changeLevelBtn").addEventListener("click", nextLevel);
     document.getElementById("hintBtn").addEventListener("click", updateHint);
-    document.getElementById("challengeFriendBtn").addEventListener("click", toggleChallengeMode);
+    challengeFriendBtn.addEventListener("click", toggleChallengeMode);
     teacherToggleBtn.addEventListener("click", toggleTeacherMode);
     document.getElementById("applyTeacherMatrixBtn").addEventListener("click", applyTeacherMatrix);
     document.getElementById("randomVectorsBtn").addEventListener("click", randomizeVectors);
