@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Matrix Arena</title>
+  <title>LAG Lab</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -196,6 +196,64 @@
 
     .hero-card:nth-child(3) {
       transform: rotate(2deg);
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .module-card {
+      padding: 16px 18px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 239, 0.94));
+      border: 1px solid rgba(30, 41, 51, 0.08);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .module-card h3 {
+      margin-bottom: 8px;
+    }
+
+    .crossword-board {
+      display: grid;
+      grid-template-columns: repeat(8, 42px);
+      gap: 6px;
+      justify-content: start;
+    }
+
+    .crossword-cell {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid rgba(30, 41, 51, 0.1);
+      background: rgba(255, 255, 255, 0.96);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      text-transform: uppercase;
+      position: relative;
+    }
+
+    .crossword-cell.block {
+      background: rgba(20, 48, 61, 0.88);
+      border-color: rgba(20, 48, 61, 0.88);
+    }
+
+    .crossword-cell.active {
+      background: rgba(44, 125, 240, 0.14);
+      border-color: rgba(44, 125, 240, 0.3);
+      color: var(--blue);
+    }
+
+    .crossword-cell .index {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 0.58rem;
+      color: var(--muted);
+      font-weight: 700;
     }
 
     .title-block p,
@@ -918,7 +976,8 @@
       .pricing-grid,
       .audience-grid,
       .method-grid,
-      .compact-grid {
+      .compact-grid,
+      .module-grid {
         grid-template-columns: 1fr;
       }
 
@@ -975,13 +1034,13 @@
           <div class="pill-row">
             <span class="pill">Linear Algebra</span>
             <span class="pill">Visual Reasoning</span>
-            <span class="pill">Matrix Arena</span>
+            <span class="pill">LAG Lab</span>
           </div>
-          <div class="hero-kicker">Play the spectrum</div>
-          <h1>Matrix Arena</h1>
+          <div class="hero-kicker">Linear Algebra Gamified</div>
+          <h1>LAG Lab</h1>
           <p class="hero-lead">
-            Classify vectors by watching what a matrix does to them. Find directions that survive,
-            directions that vanish, and directions that bend.
+            A playful linear algebra playground with visual arenas, buzzer battles, crosswords,
+            and concept labs built for real learning instead of passive review.
           </p>
         </div>
         <div class="stat-strip">
@@ -1009,16 +1068,16 @@
       </div>
       <div class="hero-marquee">
         <div class="hero-card">
-          <strong>Spot the survivor</strong>
-          <p class="small">Find vectors that keep their direction and expose the hidden eigenspaces.</p>
+          <strong>Matrix Arena</strong>
+          <p class="small">Spot invariant directions, null space vectors, and 3D transformation behavior.</p>
         </div>
         <div class="hero-card">
-          <strong>Beat the buzzer</strong>
-          <p class="small">Challenge a friend, race the countdown, and earn points for sharp spectral instincts.</p>
+          <strong>Crossword Lab</strong>
+          <p class="small">Lock in vocabulary like basis, rank, kernel, and diagonalizable through puzzle play.</p>
         </div>
         <div class="hero-card">
-          <strong>Level into 3D</strong>
-          <p class="small">Move from 2 × 2 warmups to 3 × 3 transformations with projected 3D vectors.</p>
+          <strong>Challenge Modes</strong>
+          <p class="small">Race the buzzer, challenge friends, and build speed under timed concept pressure.</p>
         </div>
       </div>
     </section>
@@ -1265,6 +1324,69 @@
           </div>
         </div>
       </aside>
+    </section>
+
+    <section class="panel stack">
+      <div class="controls-head">
+        <div>
+          <h2>Game Modes</h2>
+          <p>LAG Lab is a platform. Matrix Arena is one module, and more puzzle formats can live beside it.</p>
+        </div>
+      </div>
+      <div class="module-grid">
+        <article class="module-card">
+          <h3>Matrix Arena</h3>
+          <p>Visual classification game for eigenvectors, null space vectors, and directional change in 2D and 3D.</p>
+        </article>
+        <article class="module-card">
+          <h3>Crossword Lab</h3>
+          <p>Vocabulary-first puzzle mode for linear algebra terminology, notation, and theorem language.</p>
+        </article>
+        <article class="module-card">
+          <h3>Boss Battles</h3>
+          <p>Timed multi-step missions combining spectral reasoning, diagonalization, and computation strategy.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel stack">
+      <div class="controls-head">
+        <div>
+          <h2>Crossword Lab</h2>
+          <p>A first scaffold for a vocabulary puzzle mode that fits the broader LAG Lab identity.</p>
+        </div>
+      </div>
+      <div class="learning-grid">
+        <div class="feature-card">
+          <h3>Mini Crossword</h3>
+          <div class="crossword-board" aria-label="crossword preview">
+            <div class="crossword-cell active"><span class="index">1</span>R</div>
+            <div class="crossword-cell active">A</div>
+            <div class="crossword-cell active">N</div>
+            <div class="crossword-cell active">K</div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell"><span class="index">2</span></div>
+            <div class="crossword-cell"></div>
+            <div class="crossword-cell"></div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell"><span class="index">3</span></div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell"></div>
+            <div class="crossword-cell block"></div>
+            <div class="crossword-cell block"></div>
+          </div>
+        </div>
+        <div class="feature-card">
+          <h3>Clue Ideas</h3>
+          <ul class="objective-list">
+            <li>`1 Across:` Number of pivots in a matrix.</li>
+            <li>`2 Down:` Set of vectors sent to zero by a transformation.</li>
+            <li>`3 Across:` A spanning set with linear independence.</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section class="panel stack">
