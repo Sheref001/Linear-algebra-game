@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Matrix Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee:wght@400&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #fff7e8;
@@ -22,7 +25,7 @@
       --shadow: 0 24px 60px rgba(34, 48, 62, 0.14);
       --shadow-soft: 0 14px 28px rgba(34, 48, 62, 0.08);
       --grid-step: 32px;
-      font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
     }
 
     * {
@@ -75,6 +78,8 @@
       position: relative;
       overflow: hidden;
       background:
+        radial-gradient(circle at 18% 25%, rgba(44, 125, 240, 0.18), transparent 28%),
+        radial-gradient(circle at 78% 18%, rgba(239, 125, 50, 0.24), transparent 26%),
         linear-gradient(140deg, rgba(255, 250, 241, 0.98), rgba(255, 239, 212, 0.98)),
         linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
       border: 1px solid rgba(30, 41, 51, 0.08);
@@ -88,13 +93,26 @@
     .hero::after {
       content: "";
       position: absolute;
-      right: -60px;
-      top: -70px;
-      width: 280px;
-      height: 280px;
-      border-radius: 50%;
+      right: -40px;
+      top: -30px;
+      width: 320px;
+      height: 220px;
+      border-radius: 36px;
       background:
-        radial-gradient(circle at center, rgba(44, 125, 240, 0.2), rgba(44, 125, 240, 0) 70%);
+        linear-gradient(135deg, rgba(44, 125, 240, 0.16), rgba(239, 125, 50, 0.12));
+      transform: rotate(-10deg);
+      pointer-events: none;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      left: -32px;
+      bottom: -58px;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: radial-gradient(circle at center, rgba(11, 143, 135, 0.18), rgba(11, 143, 135, 0) 72%);
       pointer-events: none;
     }
 
@@ -108,11 +126,76 @@
 
     .title-block h1 {
       margin: 0;
+      font-family: "Bungee", "Space Grotesk", sans-serif;
       font-size: clamp(2.4rem, 5.4vw, 4.6rem);
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      line-height: 0.92;
-      text-shadow: 0 8px 20px rgba(239, 125, 50, 0.12);
+      line-height: 0.9;
+      color: #14303d;
+      text-shadow: 0 8px 20px rgba(239, 125, 50, 0.15);
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(20, 48, 61, 0.08);
+      color: #14303d;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .hero-kicker::before {
+      content: "▲";
+      color: var(--accent-2);
+      font-size: 0.7rem;
+    }
+
+    .hero-lead {
+      max-width: 720px;
+      font-size: 1.05rem;
+    }
+
+    .hero-marquee {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .hero-card {
+      position: relative;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(30, 41, 51, 0.08);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hero-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+
+    .hero-card .small {
+      margin: 0;
+    }
+
+    .hero-card:nth-child(1) {
+      transform: rotate(-2deg);
+    }
+
+    .hero-card:nth-child(2) {
+      transform: translateY(8px);
+    }
+
+    .hero-card:nth-child(3) {
+      transform: rotate(2deg);
     }
 
     .title-block p,
@@ -839,6 +922,10 @@
         grid-template-columns: 1fr;
       }
 
+      .hero-marquee {
+        grid-template-columns: 1fr;
+      }
+
       .hero {
         padding: 24px 22px;
       }
@@ -890,8 +977,9 @@
             <span class="pill">Visual Reasoning</span>
             <span class="pill">Matrix Arena</span>
           </div>
+          <div class="hero-kicker">Play the spectrum</div>
           <h1>Matrix Arena</h1>
-          <p>
+          <p class="hero-lead">
             Classify vectors by watching what a matrix does to them. Find directions that survive,
             directions that vanish, and directions that bend.
           </p>
@@ -918,6 +1006,20 @@
       <div class="small">
         Blue is the original vector. Red is the transformed vector. If the red arrow lands at the origin,
         the vector was erased. If red stays on the same line as blue, the direction is preserved.
+      </div>
+      <div class="hero-marquee">
+        <div class="hero-card">
+          <strong>Spot the survivor</strong>
+          <p class="small">Find vectors that keep their direction and expose the hidden eigenspaces.</p>
+        </div>
+        <div class="hero-card">
+          <strong>Beat the buzzer</strong>
+          <p class="small">Challenge a friend, race the countdown, and earn points for sharp spectral instincts.</p>
+        </div>
+        <div class="hero-card">
+          <strong>Level into 3D</strong>
+          <p class="small">Move from 2 × 2 warmups to 3 × 3 transformations with projected 3D vectors.</p>
+        </div>
       </div>
     </section>
 
