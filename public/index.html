@@ -458,6 +458,7 @@
       background:
         radial-gradient(circle at top, rgba(44, 125, 240, 0.08), transparent 38%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(240, 235, 225, 0.5));
+      cursor: crosshair;
     }
 
     .legend {
@@ -472,6 +473,27 @@
       border: 1px solid rgba(30, 41, 51, 0.08);
       backdrop-filter: blur(8px);
       box-shadow: var(--shadow-soft);
+    }
+
+    .arena-overlay-controls {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      max-width: calc(100% - 28px);
+    }
+
+    .arena-view-tip {
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 252, 246, 0.92);
+      border: 1px solid rgba(30, 41, 51, 0.08);
+      box-shadow: var(--shadow-soft);
+      font-size: 0.88rem;
+      color: var(--muted);
     }
 
     .legend-item {
@@ -1101,6 +1123,10 @@
             <div class="legend-item"><span class="swatch blue"></span> Original vector</div>
             <div class="legend-item"><span class="swatch red"></span> Transformed vector</div>
           </div>
+          <div class="arena-overlay-controls">
+            <button class="btn-secondary" id="resetViewBtn" type="button">Reset 3D View</button>
+            <div class="arena-view-tip" id="arenaViewTip">2D mode uses the fixed xy grid.</div>
+          </div>
         </div>
 
         <div class="matrix-grid" style="margin-top: 14px;">
@@ -1505,6 +1531,8 @@
     const buzzBtn = document.getElementById("buzzBtn");
     const nextChallengeQuestionBtn = document.getElementById("nextChallengeQuestionBtn");
     const restartChallengeBtn = document.getElementById("restartChallengeBtn");
+    const resetViewBtn = document.getElementById("resetViewBtn");
+    const arenaViewTip = document.getElementById("arenaViewTip");
     const challengeFriendBtn = document.getElementById("challengeFriendBtn");
     const topicSelect = document.getElementById("topicSelect");
     const conceptRadarList = document.getElementById("conceptRadarList");
@@ -1841,7 +1869,12 @@
       currentProfile: null,
       supabase: null,
       backendReady: false,
-      isInstructor: false
+      isInstructor: false,
+      cameraYaw: -0.75,
+      cameraPitch: 0.52,
+      dragging3D: false,
+      dragPointerX: 0,
+      dragPointerY: 0
     };
 
     state.transformedVector = zeroVector(levelDefinitions[0].matrix.length);
@@ -1850,6 +1883,8 @@
     const EPSILON = 1e-8;
     const axisLimit = 8;
     const scale = canvas.width / (axisLimit * 2 + 2);
+    const defaultCameraYaw = -0.75;
+    const defaultCameraPitch = 0.52;
     const teacherDimension = document.getElementById("teacherDimension");
 
     function getDimension(matrix = state.currentMatrix) {
@@ -2494,7 +2529,13 @@
     }
 
     function setCurrentMatrix(matrix, description) {
+      const nextDimension = matrix.length;
       state.currentMatrix = matrix.map((row) => row.map(Number));
+      state.dragging3D = false;
+      if (nextDimension === 3) {
+        state.cameraYaw = defaultCameraYaw;
+        state.cameraPitch = defaultCameraPitch;
+      }
       matrixDisplay.innerHTML = matrixToHtml(state.currentMatrix);
       levelDescription.textContent = description;
       prepareRound(true);
@@ -2666,11 +2707,27 @@
       if (vector.length === 2) {
         return vector;
       }
-      const [x, y, z] = vector;
+      const rotated = rotateVector3D(vector);
+      const perspective = 1 + rotated[2] * 0.06;
       return [
-        x + z * 0.56,
-        y + z * 0.36
+        rotated[0] * perspective,
+        rotated[1] * perspective
       ];
+    }
+
+    function rotateVector3D(vector) {
+      const [x, y, z] = vector;
+      const cosYaw = Math.cos(state.cameraYaw);
+      const sinYaw = Math.sin(state.cameraYaw);
+      const cosPitch = Math.cos(state.cameraPitch);
+      const sinPitch = Math.sin(state.cameraPitch);
+
+      const xYaw = x * cosYaw + z * sinYaw;
+      const zYaw = -x * sinYaw + z * cosYaw;
+      const yPitch = y * cosPitch - zYaw * sinPitch;
+      const zPitch = y * sinPitch + zYaw * cosPitch;
+
+      return [xYaw, yPitch, zPitch];
     }
 
     function worldToCanvas(vector) {
@@ -2693,6 +2750,59 @@
         ctx.fillStyle = "rgba(31, 45, 47, 0.55)";
         ctx.font = "14px Menlo, monospace";
         ctx.fillText(axis.label, x + 6, y - 6);
+      });
+    }
+
+    function drawSegment3D(start, end, color, width = 1.4, dashed = false) {
+      const [x1, y1] = worldToCanvas(start);
+      const [x2, y2] = worldToCanvas(end);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dashed ? [6, 5] : []);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawOctantFrame() {
+      const extent = 4;
+      const corners = [
+        [-extent, -extent, -extent], [extent, -extent, -extent],
+        [extent, extent, -extent], [-extent, extent, -extent],
+        [-extent, -extent, extent], [extent, -extent, extent],
+        [extent, extent, extent], [-extent, extent, extent]
+      ];
+      const edges = [
+        [0, 1], [1, 2], [2, 3], [3, 0],
+        [4, 5], [5, 6], [6, 7], [7, 4],
+        [0, 4], [1, 5], [2, 6], [3, 7]
+      ];
+      edges.forEach(([from, to]) => {
+        drawSegment3D(corners[from], corners[to], "rgba(31, 45, 47, 0.18)", 1.2);
+      });
+
+      drawSegment3D([-extent, 0, 0], [extent, 0, 0], "rgba(44, 125, 240, 0.18)", 1.1, true);
+      drawSegment3D([0, -extent, 0], [0, extent, 0], "rgba(11, 143, 135, 0.18)", 1.1, true);
+      drawSegment3D([0, 0, -extent], [0, 0, extent], "rgba(239, 125, 50, 0.18)", 1.1, true);
+
+      const octants = [
+        { point: [2.8, 2.8, 2.8], label: "(+,+,+)" },
+        { point: [-2.8, 2.8, 2.8], label: "(-,+,+)" },
+        { point: [2.8, -2.8, 2.8], label: "(+,-,+)" },
+        { point: [-2.8, -2.8, 2.8], label: "(-,-,+)" },
+        { point: [2.8, 2.8, -2.8], label: "(+,+,-)" },
+        { point: [-2.8, 2.8, -2.8], label: "(-,+,-)" },
+        { point: [2.8, -2.8, -2.8], label: "(+,-,-)" },
+        { point: [-2.8, -2.8, -2.8], label: "(-,-,-)" }
+      ];
+
+      ctx.fillStyle = "rgba(31, 45, 47, 0.52)";
+      ctx.font = "11px Menlo, monospace";
+      octants.forEach((octant) => {
+        const [x, y] = worldToCanvas(octant.point);
+        ctx.fillText(octant.label, x + 4, y - 4);
       });
     }
 
@@ -2738,13 +2848,78 @@
       ctx.setLineDash([]);
     }
 
+    function updateArenaViewUI() {
+      const isThreeDimensional = getDimension() === 3;
+      resetViewBtn.style.display = isThreeDimensional ? "inline-flex" : "none";
+      arenaViewTip.textContent = isThreeDimensional
+        ? "3D mode: drag to rotate the octants and inspect both vectors."
+        : "2D mode uses the fixed xy grid.";
+      canvas.style.cursor = isThreeDimensional ? (state.dragging3D ? "grabbing" : "grab") : "crosshair";
+    }
+
+    function reset3DView() {
+      state.cameraYaw = defaultCameraYaw;
+      state.cameraPitch = defaultCameraPitch;
+      state.dragging3D = false;
+      updateArenaViewUI();
+      drawScene();
+    }
+
+    function start3DRotation(event) {
+      if (getDimension() !== 3) {
+        return;
+      }
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+      state.dragging3D = true;
+      state.dragPointerX = event.clientX;
+      state.dragPointerY = event.clientY;
+      if (canvas.setPointerCapture) {
+        canvas.setPointerCapture(event.pointerId);
+      }
+      updateArenaViewUI();
+      event.preventDefault();
+    }
+
+    function update3DRotation(event) {
+      if (!state.dragging3D || getDimension() !== 3) {
+        return;
+      }
+      const dx = event.clientX - state.dragPointerX;
+      const dy = event.clientY - state.dragPointerY;
+      state.dragPointerX = event.clientX;
+      state.dragPointerY = event.clientY;
+      state.cameraYaw += dx * 0.012;
+      state.cameraPitch = Math.max(-1.35, Math.min(1.35, state.cameraPitch - dy * 0.01));
+      drawScene();
+      event.preventDefault();
+    }
+
+    function stop3DRotation(event) {
+      if (!state.dragging3D) {
+        return;
+      }
+      state.dragging3D = false;
+      if (event && canvas.releasePointerCapture) {
+        try {
+          canvas.releasePointerCapture(event.pointerId);
+        } catch (error) {
+          // Ignore capture release failures from synthetic or already-released events.
+        }
+      }
+      updateArenaViewUI();
+    }
+
     function drawScene() {
       if (getDimension() === 3) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawOctantFrame();
         drawAxes3D();
       } else {
         drawGrid();
       }
+      updateArenaViewUI();
 
       if (!state.selectedVector) {
         return;
@@ -2760,7 +2935,7 @@
       drawArrow(current, "#dc2626", 4);
 
       if (classification && classification.kind === "null") {
-        const origin = worldToCanvas([0, 0]);
+        const origin = worldToCanvas(zeroVector());
         ctx.fillStyle = "rgba(194, 65, 12, 0.25)";
         ctx.beginPath();
         ctx.arc(origin[0], origin[1], 14, 0, Math.PI * 2);
@@ -3276,6 +3451,11 @@
     buzzBtn.addEventListener("click", buzzIn);
     nextChallengeQuestionBtn.addEventListener("click", nextChallengeQuestion);
     restartChallengeBtn.addEventListener("click", restartChallenge);
+    resetViewBtn.addEventListener("click", reset3DView);
+    canvas.addEventListener("pointerdown", start3DRotation);
+    window.addEventListener("pointermove", update3DRotation);
+    window.addEventListener("pointerup", stop3DRotation);
+    window.addEventListener("pointercancel", stop3DRotation);
 
     // Initialize the game with the first level and a fresh set of vectors.
     matrixDisplay.innerHTML = matrixToHtml(state.currentMatrix);
@@ -3284,6 +3464,7 @@
     prepareRound(true);
     setViewMode("geometric");
     syncTeacherMatrixVisibility();
+    updateArenaViewUI();
     renderTopicPack();
     updateBackendStatus();
     initBackend().then(async () => {
