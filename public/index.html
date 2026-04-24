@@ -372,7 +372,6 @@
 
     .matrix {
       display: inline-grid;
-      grid-template-columns: repeat(2, auto);
       gap: 6px 12px;
       padding: 10px 12px;
       border-left: 4px solid rgba(44, 125, 240, 0.26);
@@ -445,7 +444,7 @@
 
     .teacher-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -1052,12 +1051,24 @@
 
         <div class="teacher-box" id="teacherBox" style="margin-top: 12px;">
           <h3>Teacher Mode</h3>
-          <p>Enter a custom 2 × 2 matrix and generate fresh random vectors.</p>
+          <p>Enter a custom 2 × 2 or 3 × 3 matrix and generate fresh random vectors.</p>
+          <div class="teacher-row" style="margin-bottom: 10px;">
+            <label for="teacherDimension" class="small">Matrix size</label>
+            <select class="topic-select" id="teacherDimension" style="max-width: 180px;">
+              <option value="2">2 × 2</option>
+              <option value="3">3 × 3</option>
+            </select>
+          </div>
           <div class="teacher-grid">
             <label>a11 <input id="m11" type="number" value="1" step="any" /></label>
             <label>a12 <input id="m12" type="number" value="0" step="any" /></label>
+            <label>a13 <input id="m13" type="number" value="0" step="any" /></label>
             <label>a21 <input id="m21" type="number" value="0" step="any" /></label>
             <label>a22 <input id="m22" type="number" value="1" step="any" /></label>
+            <label>a23 <input id="m23" type="number" value="0" step="any" /></label>
+            <label>a31 <input id="m31" type="number" value="0" step="any" /></label>
+            <label>a32 <input id="m32" type="number" value="0" step="any" /></label>
+            <label>a33 <input id="m33" type="number" value="1" step="any" /></label>
           </div>
           <div class="teacher-row">
             <button class="btn-primary" id="applyTeacherMatrixBtn" type="button">Apply Matrix</button>
@@ -1561,6 +1572,11 @@
         name: "Level 4",
         description: "Level 4: challenge mode rewards you for recognizing the scaling factor as an eigenvalue.",
         matrix: [[0, 2], [2, 0]]
+      },
+      {
+        name: "Level 5",
+        description: "Level 5: 3D mode introduces 3 × 3 matrices and 3 × 1 vectors in a projected space.",
+        matrix: [[2, 0, 0], [0, 1, 1], [0, 0, 0]]
       }
     ];
 
@@ -1604,44 +1620,59 @@
       isInstructor: false
     };
 
+    state.transformedVector = zeroVector(levelDefinitions[0].matrix.length);
+    state.displayVector = zeroVector(levelDefinitions[0].matrix.length);
+
     const EPSILON = 1e-8;
     const axisLimit = 8;
     const scale = canvas.width / (axisLimit * 2 + 2);
+    const teacherDimension = document.getElementById("teacherDimension");
+
+    function getDimension(matrix = state.currentMatrix) {
+      return matrix.length;
+    }
+
+    function zeroVector(dimension = getDimension()) {
+      return Array.from({ length: dimension }, () => 0);
+    }
+
+    function sameVector(left, right) {
+      return left && right && left.length === right.length && left.every((value, index) => Math.abs(value - right[index]) < EPSILON);
+    }
 
     function multiplyMatrixVector(matrix, vector) {
-      return [
-        matrix[0][0] * vector[0] + matrix[0][1] * vector[1],
-        matrix[1][0] * vector[0] + matrix[1][1] * vector[1]
-      ];
+      return matrix.map((row) => row.reduce((sum, value, index) => sum + value * vector[index], 0));
     }
 
     function isNullSpaceVector(vector, transformed) {
       const output = transformed || multiplyMatrixVector(state.currentMatrix, vector);
-      return Math.abs(output[0]) < EPSILON && Math.abs(output[1]) < EPSILON;
+      return output.every((value) => Math.abs(value) < EPSILON);
     }
 
     function isEigenvector(vector, transformed) {
       const output = transformed || multiplyMatrixVector(state.currentMatrix, vector);
-      if (Math.abs(vector[0]) < EPSILON && Math.abs(vector[1]) < EPSILON) {
+      if (vector.every((value) => Math.abs(value) < EPSILON)) {
         return { isEigen: false, eigenvalue: null };
       }
       if (isNullSpaceVector(vector, output)) {
         return { isEigen: false, eigenvalue: null };
       }
 
-      const cross = vector[0] * output[1] - vector[1] * output[0];
-      if (Math.abs(cross) > EPSILON) {
-        return { isEigen: false, eigenvalue: null };
-      }
-
       let eigenvalue = null;
-      if (Math.abs(vector[0]) > EPSILON) {
-        eigenvalue = output[0] / vector[0];
-      } else if (Math.abs(vector[1]) > EPSILON) {
-        eigenvalue = output[1] / vector[1];
+      for (let index = 0; index < vector.length; index += 1) {
+        if (Math.abs(vector[index]) > EPSILON) {
+          const candidate = output[index] / vector[index];
+          if (eigenvalue === null) {
+            eigenvalue = candidate;
+          } else if (Math.abs(candidate - eigenvalue) > EPSILON) {
+            return { isEigen: false, eigenvalue: null };
+          }
+        } else if (Math.abs(output[index]) > EPSILON) {
+          return { isEigen: false, eigenvalue: null };
+        }
       }
 
-      return { isEigen: true, eigenvalue };
+      return eigenvalue === null ? { isEigen: false, eigenvalue: null } : { isEigen: true, eigenvalue };
     }
 
     function classifyVector(vector, transformed) {
@@ -1666,10 +1697,11 @@
     }
 
     function formatVector(vector) {
-      return `(${formatNumber(vector[0])}, ${formatNumber(vector[1])})`;
+      return `(${vector.map((value) => formatNumber(value)).join(", ")})`;
     }
 
     function matrixToHtml(matrix) {
+      matrixDisplay.style.gridTemplateColumns = `repeat(${matrix[0].length}, auto)`;
       return matrix.flat().map((value) => `<span>${formatNumber(value)}</span>`).join("");
     }
 
@@ -2196,31 +2228,39 @@
 
       // Seed with level-aware vectors to make the pedagogical cases appear often.
       const matrix = state.currentMatrix;
-      const specials = [
-        [1, 0],
-        [0, 1],
-        [1, 1],
-        [1, -1],
-        [2, 1],
-        [-1, 2]
-      ];
-
-      if (Math.abs(matrix[0][0] - matrix[1][0]) < EPSILON && Math.abs(matrix[0][1] - matrix[1][1]) < EPSILON) {
-        specials.push([1, 1], [-1, -1]);
-      }
+      const dimension = getDimension(matrix);
+      const specials = dimension === 3
+        ? [
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 1, 0],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 1],
+            [1, -1, 1]
+          ]
+        : [
+            [1, 0],
+            [0, 1],
+            [1, 1],
+            [1, -1],
+            [2, 1],
+            [-1, 2]
+          ];
 
       for (const vector of specials) {
         const key = vector.join(",");
-        if (!seen.has(key) && !(vector[0] === 0 && vector[1] === 0)) {
+        if (!seen.has(key) && vector.some((value) => value !== 0)) {
           seen.add(key);
           source.push(vector);
         }
       }
 
       while (source.length < 6) {
-        const vector = [randomInteger(-3, 3), randomInteger(-3, 3)];
+        const vector = Array.from({ length: dimension }, () => randomInteger(-3, 3));
         const key = vector.join(",");
-        if (!seen.has(key) && !(vector[0] === 0 && vector[1] === 0)) {
+        if (!seen.has(key) && vector.some((value) => value !== 0)) {
           seen.add(key);
           source.push(vector);
         }
@@ -2240,8 +2280,8 @@
       state.candidateVectors = generateCandidateVectors();
       if (resetSelection) {
         state.selectedVector = null;
-        state.transformedVector = [0, 0];
-        state.displayVector = [0, 0];
+        state.transformedVector = zeroVector();
+        state.displayVector = zeroVector();
         state.targetClassification = null;
         state.lastResult = null;
         state.roundResolved = false;
@@ -2271,7 +2311,7 @@
         button.type = "button";
         button.className = "vector-btn";
         button.textContent = `v${index + 1} = ${formatVector(vector)}`;
-        if (state.selectedVector && vector[0] === state.selectedVector[0] && vector[1] === state.selectedVector[1]) {
+        if (sameVector(state.selectedVector, vector)) {
           button.classList.add("active");
         }
         button.disabled = state.roundResolved;
@@ -2306,10 +2346,7 @@
         const elapsed = timestamp - state.animationStart;
         const t = Math.min(1, elapsed / state.animationDuration);
         const eased = 1 - Math.pow(1 - t, 3);
-        state.displayVector = [
-          state.selectedVector[0] + (state.transformedVector[0] - state.selectedVector[0]) * eased,
-          state.selectedVector[1] + (state.transformedVector[1] - state.selectedVector[1]) * eased
-        ];
+        state.displayVector = state.selectedVector.map((value, index) => value + (state.transformedVector[index] - value) * eased);
         drawScene();
         if (t < 1) {
           state.animationFrame = requestAnimationFrame(step);
@@ -2344,10 +2381,11 @@
       }
 
       const transformed = state.transformedVector;
-      if (isNullSpaceVector(state.selectedVector, transformed)) {
+      const classification = classifyVector(state.selectedVector, transformed);
+      if (classification.kind === "null") {
         hintBox.textContent = "Hint: Check if the output is zero. This vector may have been erased entirely.";
-      } else if (Math.abs(state.selectedVector[0] * transformed[1] - state.selectedVector[1] * transformed[0]) < EPSILON) {
-        hintBox.textContent = "Hint: Compare the lines through the origin. The direction may be preserved even if the length changes or the vector flips.";
+      } else if (classification.kind === "eigen") {
+        hintBox.textContent = "Hint: Compare the input and output directions through the origin. The vector may stay on the same line even in 3D.";
       } else {
         hintBox.textContent = "Hint: The direction changed. If the red arrow leaves the original line, it is not an eigenvector.";
       }
@@ -2400,11 +2438,38 @@
       ctx.restore();
     }
 
-    function worldToCanvas(vector) {
+    function projectVector(vector) {
+      if (vector.length === 2) {
+        return vector;
+      }
+      const [x, y, z] = vector;
       return [
-        canvas.width / 2 + vector[0] * scale,
-        canvas.height / 2 - vector[1] * scale
+        x + z * 0.56,
+        y + z * 0.36
       ];
+    }
+
+    function worldToCanvas(vector) {
+      const projected = projectVector(vector);
+      return [
+        canvas.width / 2 + projected[0] * scale,
+        canvas.height / 2 - projected[1] * scale
+      ];
+    }
+
+    function drawAxes3D() {
+      const axes = [
+        { vector: [axisLimit, 0, 0], label: "x" },
+        { vector: [0, axisLimit, 0], label: "y" },
+        { vector: [0, 0, axisLimit], label: "z" }
+      ];
+      axes.forEach((axis) => {
+        drawArrow(axis.vector, "rgba(31, 45, 47, 0.38)", 2);
+        const [x, y] = worldToCanvas(axis.vector);
+        ctx.fillStyle = "rgba(31, 45, 47, 0.55)";
+        ctx.font = "14px Menlo, monospace";
+        ctx.fillText(axis.label, x + 6, y - 6);
+      });
     }
 
     function drawArrow(vector, color, width) {
@@ -2428,14 +2493,14 @@
     }
 
     function drawLineGuide(vector, color) {
-      if (!vector || (Math.abs(vector[0]) < EPSILON && Math.abs(vector[1]) < EPSILON)) {
+      if (!vector || vector.every((value) => Math.abs(value) < EPSILON)) {
         return;
       }
 
-      const length = Math.hypot(vector[0], vector[1]);
-      const direction = [vector[0] / length, vector[1] / length];
-      const far = [direction[0] * axisLimit, direction[1] * axisLimit];
-      const near = [-far[0], -far[1]];
+      const length = Math.hypot(...vector);
+      const direction = vector.map((value) => value / length);
+      const far = direction.map((value) => value * axisLimit);
+      const near = far.map((value) => -value);
       const [x1, y1] = worldToCanvas(near);
       const [x2, y2] = worldToCanvas(far);
 
@@ -2450,7 +2515,12 @@
     }
 
     function drawScene() {
-      drawGrid();
+      if (getDimension() === 3) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawAxes3D();
+      } else {
+        drawGrid();
+      }
 
       if (!state.selectedVector) {
         return;
@@ -2840,12 +2910,11 @@
       const vector = state.selectedVector;
       const transformed = state.transformedVector;
       const eigenCheck = isEigenvector(vector, transformed);
-      const cross = vector[0] * transformed[1] - vector[1] * transformed[0];
       const lines = [
         `v = ${formatVector(vector)}`,
         `A v = ${formatVector(transformed)}`,
         `zero test: ${isNullSpaceVector(vector, transformed) ? "A v = 0" : "A v ≠ 0"}`,
-        `same-line test: cross(v, A v) = ${formatNumber(cross)}`
+        `same-line test: ${eigenCheck.isEigen ? "A v = λ v" : "output is not a scalar multiple of v"}`
       ];
       if (eigenCheck.isEigen) {
         lines.push(`eigenvalue: λ = ${formatNumber(eigenCheck.eigenvalue)}`);
@@ -2892,13 +2961,20 @@
     }
 
     function applyTeacherMatrix() {
-      const matrix = [
-        [Number(document.getElementById("m11").value), Number(document.getElementById("m12").value)],
-        [Number(document.getElementById("m21").value), Number(document.getElementById("m22").value)]
-      ];
+      const dimension = Number(teacherDimension.value);
+      const matrix = dimension === 3
+        ? [
+            [Number(document.getElementById("m11").value), Number(document.getElementById("m12").value), Number(document.getElementById("m13").value)],
+            [Number(document.getElementById("m21").value), Number(document.getElementById("m22").value), Number(document.getElementById("m23").value)],
+            [Number(document.getElementById("m31").value), Number(document.getElementById("m32").value), Number(document.getElementById("m33").value)]
+          ]
+        : [
+            [Number(document.getElementById("m11").value), Number(document.getElementById("m12").value)],
+            [Number(document.getElementById("m21").value), Number(document.getElementById("m22").value)]
+          ];
 
       if (matrix.flat().some((value) => Number.isNaN(value))) {
-        updateFeedback("Invalid matrix", "Teacher mode expects four numeric entries.", "", "bad");
+        updateFeedback("Invalid matrix", `Teacher mode expects ${dimension * dimension} numeric entries.`, "", "bad");
         return;
       }
 
@@ -2910,8 +2986,8 @@
     function randomizeVectors() {
       state.candidateVectors = generateCandidateVectors();
       state.selectedVector = null;
-      state.transformedVector = [0, 0];
-      state.displayVector = [0, 0];
+      state.transformedVector = zeroVector();
+      state.displayVector = zeroVector();
       state.roundResolved = false;
       renderVectorButtons();
       updateControlStates();
@@ -2935,6 +3011,14 @@
       document.getElementById("algebraModeBtn").classList.toggle("active", mode === "algebra");
     }
 
+    function syncTeacherMatrixVisibility() {
+      const isThreeDimensional = Number(teacherDimension.value) === 3;
+      ["m13", "m23", "m31", "m32", "m33"].forEach((id) => {
+        const wrapper = document.getElementById(id).closest("label");
+        wrapper.style.display = isThreeDimensional ? "grid" : "none";
+      });
+    }
+
     document.querySelectorAll(".classify-btn").forEach((button) => {
       button.addEventListener("click", () => scoreSubmission(button.dataset.kind));
     });
@@ -2945,6 +3029,7 @@
     teacherToggleBtn.addEventListener("click", toggleTeacherMode);
     document.getElementById("applyTeacherMatrixBtn").addEventListener("click", applyTeacherMatrix);
     document.getElementById("randomVectorsBtn").addEventListener("click", randomizeVectors);
+    teacherDimension.addEventListener("change", syncTeacherMatrixVisibility);
     document.getElementById("geometricModeBtn").addEventListener("click", () => setViewMode("geometric"));
     document.getElementById("algebraModeBtn").addEventListener("click", () => setViewMode("algebra"));
     document.getElementById("generateChallengeBtn").addEventListener("click", generateFriendChallengeLink);
@@ -2974,6 +3059,7 @@
     updateStats();
     prepareRound(true);
     setViewMode("geometric");
+    syncTeacherMatrixVisibility();
     renderTopicPack();
     updateBackendStatus();
     initBackend().then(async () => {
