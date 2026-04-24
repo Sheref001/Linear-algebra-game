@@ -1434,6 +1434,10 @@
           <ul class="objective-list" id="topicObjectives"></ul>
         </div>
       </div>
+      <div class="feature-card">
+        <h3>Major Connections</h3>
+        <ul class="objective-list" id="topicApplications"></ul>
+      </div>
       <div class="feature-grid" id="topicCards"></div>
       <div class="method-grid" id="methodCards"></div>
     </section>
@@ -1541,6 +1545,7 @@
     const topicSummary = document.getElementById("topicSummary");
     const topicStats = document.getElementById("topicStats");
     const topicObjectives = document.getElementById("topicObjectives");
+    const topicApplications = document.getElementById("topicApplications");
     const topicCards = document.getElementById("topicCards");
     const methodCards = document.getElementById("methodCards");
     const requestDemoBtn = document.getElementById("requestDemoBtn");
@@ -1578,16 +1583,28 @@
           "Eigenvectors keep their direction, even when scaled or flipped.",
           "General vectors get redirected by the transformation."
         ],
+        applications: [
+          "NLP and LLMs: the dot product between embedding vectors is the basic similarity score behind attention and nearest-neighbor retrieval.",
+          "Data analytics: null space directions represent feature combinations the model or transform throws away, which matters for compression and rank deficiency.",
+          "Game development: transformation matrices preserve some directions and collapse others when projecting, scaling, or constraining movement."
+        ],
         cards: [
           { title: "Core Idea", text: "An eigenvector survives the map on the same line. A null space vector disappears entirely. The arena makes that distinction immediate." },
           { title: "Common Misconception", text: "Students often think any stretched vector is an eigenvector. The key test is preserved direction, not changed magnitude." },
+          { title: "LLM Lens", text: "Word or sentence embeddings behave like vectors. Cosine similarity is a normalized dot product, so early linear algebra directly powers semantic search and attention scoring." },
           { title: "Bridge To Proof", text: "Once students trust the picture, you can prove the same-line condition algebraically using linear dependence or the cross-product test in 2D." }
         ],
         methods: [
           { title: "Direct Inspection", text: "Fastest for small 2 x 2 visual examples. Good for building intuition, but not enough for larger matrices." },
+          { title: "Embedding Similarity", text: "In data science and LLM pipelines, dot products rank how aligned two vectors are. That same alignment idea underlies the geometric test for preserved directions." },
           { title: "Characteristic Polynomial", text: "Systematic and exact. Students learn where eigenvalues come from, then solve for eigenspaces." },
           { title: "Reduced Row Echelon Form", text: "Best follow-up after λ is known. It exposes the eigenspace and the null space structure cleanly." }
-        ]
+        ],
+        hintBank: {
+          null: "Applied lens: a null-space direction is information the system discards. In analytics this means redundant features; in graphics it can mean projection onto a lower-dimensional view.",
+          eigen: "Applied lens: preserved directions are the stable modes of a transformation. In ranking or repeated updates, those directions keep showing up after each iteration.",
+          neither: "Applied lens: most embedding vectors or game-state vectors are mixed by the transform, so they move into a new direction instead of staying on a spectral axis."
+        }
       },
       diagonalization: {
         kicker: "Diagonalization Lab",
@@ -1604,16 +1621,27 @@
           "The columns of P must line up with the diagonal entries of D.",
           "Diagonalization turns repeated multiplication into scalar exponentiation."
         ],
+        applications: [
+          "Game development: repeated camera, lighting, or physics updates become easier to analyze when the update matrix is decomposed into independent modes.",
+          "Business analytics: state-transition models and repeated forecasting steps benefit from understanding long-run behavior through eigen-directions.",
+          "Data science: PCA and spectral methods exploit special bases where a matrix action becomes simpler and easier to interpret."
+        ],
         cards: [
           { title: "When It Works", text: "A matrix is diagonalizable when it has a basis of eigenvectors. In 2 x 2 settings, two distinct eigenvalues are the cleanest route." },
           { title: "Why Students Care", text: "Computing A^20 directly is painful. Computing D^20 is trivial once the matrix is diagonalized." },
+          { title: "Simulation Lens", text: "If a system evolves by x_(k+1) = A x_k, diagonalization separates the motion into independent growth or decay modes, which is useful in animation, diffusion, and time-series models." },
           { title: "Where It Breaks", text: "Repeated eigenvalues do not automatically kill diagonalization, but they remove the shortcut guarantee. Students must count eigenvectors, not just eigenvalues." }
         ],
         methods: [
           { title: "Naive Powering", text: "Requires repeated matrix multiplication. For a dense n x n matrix, each step costs roughly O(n^3)." },
           { title: "Diagonalization Route", text: "Up-front cost to find eigenvectors and invert P, but repeated powers are cheap afterwards because D^k is immediate." },
           { title: "Best Use Case", text: "Use diagonalization when the same matrix is powered many times or when a closed-form description of dynamics matters." }
-        ]
+        ],
+        hintBank: {
+          null: "Applied lens: a zero mode signals a direction that vanishes under repeated updates, which can correspond to lost components in a simulation or compressed feature map.",
+          eigen: "Applied lens: diagonalization hunts for directions that evolve independently. Those are the coordinates where long-run behavior becomes easy to predict.",
+          neither: "Applied lens: most starting states are mixtures of several modes. Diagonalization matters because it decomposes that mixed motion into clean spectral pieces."
+        }
       },
       cayleyHamilton: {
         kicker: "Cayley-Hamilton Forge",
@@ -1630,16 +1658,27 @@
           "High powers can be reduced recursively using the characteristic equation.",
           "The theorem is both a proof tool and a computational shortcut."
         ],
+        applications: [
+          "Business analytics: discrete-time state models often need A^k for future steps, and Cayley-Hamilton can reduce those powers without multiplying forever.",
+          "Game and simulation code: small update matrices for scripted motion or finite-state dynamics can be simplified symbolically before runtime.",
+          "Data science education: it shows students that theory can produce practical shortcuts, not just formal proofs."
+        ],
         cards: [
           { title: "Main Payoff", text: "If A^2 - 5A + 6I = 0, then A^2 = 5A - 6I. Every higher power can be reduced from there." },
           { title: "Why It Matters", text: "Students see that abstract theorems can produce concrete numerical shortcuts without computing eigenvectors first." },
+          { title: "Forecasting Lens", text: "If a small transition matrix drives repeated steps in a business or gameplay model, Cayley-Hamilton can turn a huge power into a short recurrence in I, A, and A^2." },
           { title: "Teaching Angle", text: "This is the moment to connect characteristic polynomials, determinants, and matrix powers into one coherent story." }
         ],
         methods: [
           { title: "Diagonalization vs CH", text: "Diagonalization can be faster conceptually when eigenvectors are clean. Cayley-Hamilton is more robust when eigenvector computations are messy." },
           { title: "Repeated Power Reduction", text: "For 2 x 2 and 3 x 3 examples, Cayley-Hamilton often reduces powers with very little algebra after the polynomial is known." },
           { title: "Pedagogical Benefit", text: "This method teaches structure, not just computation. It helps students understand why powers are not independent forever." }
-        ]
+        ],
+        hintBank: {
+          null: "Applied lens: when a mode dies out completely, Cayley-Hamilton helps express future powers using a short recurrence instead of tracking every multiplication.",
+          eigen: "Applied lens: if one direction scales cleanly, Cayley-Hamilton and diagonalization are two different ways to exploit that structure for repeated updates.",
+          neither: "Applied lens: even when a vector is not itself spectral, the theorem still reduces the whole matrix dynamics to a small basis of powers."
+        }
       },
       numerical: {
         kicker: "Numerical Method Arena",
@@ -1656,16 +1695,27 @@
           "Full diagonalization is richer but costs more and may be unstable numerically.",
           "Cayley-Hamilton is elegant for small exact problems but not the universal computational winner."
         ],
+        applications: [
+          "LLMs and retrieval systems: huge embedding spaces rely on repeated matrix-vector products, similarity scores, and low-rank approximations rather than symbolic exact formulas.",
+          "Recommendation and search: power iteration and related spectral methods appear in ranking, graph centrality, and latent-factor workflows.",
+          "Business analytics: method choice depends on scale, interpretability, and whether you need one principal direction or a full decomposition."
+        ],
         cards: [
           { title: "Power Iteration", text: "Excellent when you only need the dominant eigenvector and the spectral gap is favorable. Each iteration is much cheaper than a full decomposition." },
           { title: "QR and Full Spectra", text: "Modern numerical methods target the whole spectrum more reliably than classroom symbolic methods on larger matrices." },
+          { title: "LLM Lens", text: "Transformer attention compares query and key vectors with dot products at scale. The core linear algebra is elementary, but the numerical setting is large and performance-sensitive." },
           { title: "Efficiency Lens", text: "Students should learn that 'best' means best for a goal: accuracy, speed, interpretability, or repeated reuse." }
         ],
         methods: [
           { title: "Power Iteration", text: "Low memory and cheap mat-vec operations. Great for one dominant mode, but slow if eigenvalues are clustered." },
           { title: "Diagonalization", text: "Useful for repeated powers and clean theory examples, but requires enough eigenvectors and is not the default large-scale numerical tool." },
           { title: "Cayley-Hamilton", text: "Strong symbolic shortcut for exact classroom problems. Less practical than iterative numerical solvers on large systems." }
-        ]
+        ],
+        hintBank: {
+          null: "Applied lens: directions near the kernel often behave like discarded signal. In data pipelines that can mean instability, redundancy, or deliberate dimensionality reduction.",
+          eigen: "Applied lens: iterative algorithms such as power iteration are built to lock onto dominant eigen-directions because those dominate repeated matrix-vector multiplication.",
+          neither: "Applied lens: most real data vectors are mixtures of many modes, which is why numerical algorithms approximate the important directions instead of expecting every vector to be special."
+        }
       }
     };
 
@@ -2457,6 +2507,13 @@
         topicObjectives.appendChild(li);
       });
 
+      topicApplications.innerHTML = "";
+      topic.applications.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        topicApplications.appendChild(li);
+      });
+
       conceptRadarList.innerHTML = "";
       topic.radar.forEach((item) => {
         const li = document.createElement("li");
@@ -2641,19 +2698,24 @@
 
     function updateHint() {
       if (!state.selectedVector) {
-        hintBox.textContent = "Pick a vector first. Then use the hint system only after watching the geometry.";
+        hintBox.innerHTML = "<strong>Hint:</strong> Pick a vector first. Then use the hint system only after watching the geometry.";
         return;
       }
 
       const transformed = state.transformedVector;
       const classification = classifyVector(state.selectedVector, transformed);
+      const topic = topicPacks[state.currentTopic];
+      let geometricHint = "";
       if (classification.kind === "null") {
-        hintBox.textContent = "Hint: Check if the output is zero. This vector may have been erased entirely.";
+        geometricHint = "Check if the output is zero. This vector may have been erased entirely.";
       } else if (classification.kind === "eigen") {
-        hintBox.textContent = "Hint: Compare the input and output directions through the origin. The vector may stay on the same line even in 3D.";
+        geometricHint = "Compare the input and output directions through the origin. The vector may stay on the same line even in 3D.";
       } else {
-        hintBox.textContent = "Hint: The direction changed. If the red arrow leaves the original line, it is not an eigenvector.";
+        geometricHint = "The direction changed. If the red arrow leaves the original line, it is not an eigenvector.";
       }
+
+      const appliedHint = topic && topic.hintBank ? topic.hintBank[classification.kind] : "";
+      hintBox.innerHTML = `<strong>Hint:</strong> ${geometricHint}${appliedHint ? `<div class="small" style="margin-top: 6px;"><strong>Major lens:</strong> ${appliedHint}</div>` : ""}`;
     }
 
     function setTopic(topicKey) {
